@@ -47,12 +47,16 @@ import { VitalSigns } from '../entities/VitalSigns';
 import { LabResult } from '../entities/LabResult';
 import { MedicalDocument } from '../entities/MedicalDocument';
 
+// Database configuration based on environment
+const isProduction = process.env.NODE_ENV === 'production';
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_OeyXpbqB6Dz4@ep-square-unit-ad3tr6wu-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
-  url: 'postgresql://neondb_owner:npg_OeyXpbqB6Dz4@ep-square-unit-ad3tr6wu-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require',
-  synchronize: true, // Only use in development
-  logging: true,
-  ssl: true, // Needed for Neon
+  url: databaseUrl,
+  synchronize: !isProduction, // Only use in development, disable in production
+  logging: !isProduction, // Disable logging in production for performance
+  ssl: databaseUrl.includes('neon.tech') || databaseUrl.includes('amazonaws.com'), // SSL for cloud providers
   entities: [
     User,
     Patient,

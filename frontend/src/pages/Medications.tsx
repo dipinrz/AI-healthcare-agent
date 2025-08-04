@@ -390,6 +390,181 @@ const Medications: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Medications List */}
+        {filteredPrescriptions.length === 0 ? (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 6 }}>
+              <Avatar sx={{ bgcolor: 'primary.main', mx: 'auto', mb: 2, width: 64, height: 64 }}>
+                <PillIcon sx={{ fontSize: 32 }} />
+              </Avatar>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                No Medications Found
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {prescriptions.length === 0 
+                  ? "You don't have any prescriptions yet. Visit a doctor to get your first prescription."
+                  : "No medications match your current filters. Try adjusting your search criteria."
+                }
+              </Typography>
+            </CardContent>
+          </Card>
+        ) : (
+          <Grid container spacing={3}>
+            {filteredPrescriptions.map((prescription) => (
+              <Grid item xs={12} md={6} lg={4} key={prescription.id}>
+                <Card sx={{ 
+                  height: '100%', 
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-4px)',
+                    boxShadow: 4,
+                  }
+                }}>
+                  <CardContent>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
+                      <Avatar sx={{ bgcolor: 'primary.main', mr: 2, mt: 0.5 }}>
+                        <PillIcon />
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                          {prescription.medication.name}
+                        </Typography>
+                        {prescription.medication.brandName && prescription.medication.brandName !== prescription.medication.name && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            Brand: {prescription.medication.brandName}
+                          </Typography>
+                        )}
+                        <Typography variant="body2" color="text.secondary">
+                          {prescription.medication.form} • {prescription.medication.strength}
+                        </Typography>
+                      </Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {getStatusIcon(prescription.status)}
+                        <Chip 
+                          label={prescription.status.replace('_', ' ').toUpperCase()} 
+                          size="small"
+                          color={
+                            prescription.status === 'active' ? 'success' :
+                            prescription.status === 'completed' ? 'info' :
+                            prescription.status === 'discontinued' ? 'error' : 'warning'
+                          }
+                          variant="outlined"
+                        />
+                      </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Prescription Details */}
+                    <List dense sx={{ py: 0 }}>
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <PillIcon sx={{ fontSize: 18, color: 'primary.main' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Dosage"
+                          secondary={prescription.dosage}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                          secondaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <ClockIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Frequency"
+                          secondary={prescription.frequency}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                          secondaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CalendarIcon sx={{ fontSize: 18, color: 'info.main' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Duration"
+                          secondary={prescription.duration}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                          secondaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+
+                      <ListItem sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <UserIcon sx={{ fontSize: 18, color: 'success.main' }} />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary="Prescribed by"
+                          secondary={`Dr. ${prescription.doctor.firstName} ${prescription.doctor.lastName} (${prescription.doctor.specialization})`}
+                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                          secondaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+
+                      {prescription.instructions && (
+                        <ListItem sx={{ px: 0 }}>
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            <InfoIcon sx={{ fontSize: 18, color: 'warning.main' }} />
+                          </ListItemIcon>
+                          <ListItemText
+                            primary="Instructions"
+                            secondary={prescription.instructions}
+                            primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                            secondaryTypographyProps={{ variant: 'body2' }}
+                          />
+                        </ListItem>
+                      )}
+                    </List>
+
+                    {/* Action Buttons */}
+                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<InfoIcon />}
+                        onClick={() => handleViewMedicationDetails(prescription.medication.id)}
+                        sx={{ flex: 1 }}
+                      >
+                        Details
+                      </Button>
+                      {prescription.status === 'active' && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          startIcon={<CheckCircleIcon />}
+                          sx={{ flex: 1 }}
+                        >
+                          Mark Taken
+                        </Button>
+                      )}
+                    </Box>
+
+                    {/* Additional Info */}
+                    <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="caption" color="text.secondary">
+                        Started: {new Date(prescription.startDate).toLocaleDateString()}
+                        {prescription.endDate && (
+                          <> • Ends: {new Date(prescription.endDate).toLocaleDateString()}</>
+                        )}
+                      </Typography>
+                      {prescription.quantity > 0 && (
+                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                          Quantity: {prescription.quantity} • Refills: {prescription.refills}
+                        </Typography>
+                      )}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+
         {/* Modern Prescription Manager */}
         <ModernPrescriptionManager 
           prescriptions={prescriptions}

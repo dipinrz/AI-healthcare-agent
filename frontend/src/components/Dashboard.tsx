@@ -117,10 +117,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             borderRadius: 2
           }}
         >
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 'bold', mb: 2 }}>
+          <Typography variant="h4" component="h1" color='white' sx={{ fontWeight: 'bold', mb: 2 }}>
             Welcome back, {user?.firstName || 'Patient'}!
           </Typography>
-          <Typography variant="body1" sx={{ opacity: 0.9 }}>
+          <Typography variant="body1" sx={{ opacity: 0.9 }} color='white'>
             Your AI Health Assistant is here to help you manage your healthcare journey.
           </Typography>
         </Paper>
