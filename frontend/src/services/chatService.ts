@@ -32,7 +32,11 @@ export interface ChatHistory {
 
 class ChatService {
   private getAuthHeaders() {
-    const token = localStorage.getItem('auth_token');
+    // Try different token keys that might be used
+    const token = localStorage.getItem('token') || 
+                 localStorage.getItem('auth_token') || 
+                 localStorage.getItem('authToken');
+    
     if (!token) {
       throw new Error('No authentication token found. Please login again.');
     }

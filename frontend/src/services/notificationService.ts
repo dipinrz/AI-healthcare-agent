@@ -40,7 +40,7 @@ class NotificationService {
 
     // Create a separate action toast for the "Mark as Taken" button
     setTimeout(() => {
-      toast((t) => (
+      toast((t:any) => (
         `Mark ${medication.medicationName} as taken?`
       ), {
         duration: 25000,
@@ -51,10 +51,10 @@ class NotificationService {
           cursor: 'pointer',
         },
         icon: '✓',
-        onClick: () => {
-          toast.dismiss();
-          this.markMedicationTaken(medication.id);
-        },
+        // onClick: () => {
+        //   toast.dismiss();
+        //   this.markMedicationTaken(medication.id);
+        // },
       });
     }, 2000);
 
@@ -81,7 +81,7 @@ class NotificationService {
 
     // Create a separate action toast for booking
     setTimeout(() => {
-      toast((t) => (
+      toast((t:any) => (
         `Book follow-up with ${followUp.doctorName}?`
       ), {
         duration: 40000,
@@ -92,10 +92,10 @@ class NotificationService {
           cursor: 'pointer',
         },
         icon: '📅',
-        onClick: () => {
-          toast.dismiss();
-          this.bookFollowUpAppointment(followUp);
-        },
+        // onClick: () => {
+        //   toast.dismiss();
+        //   this.bookFollowUpAppointment(followUp);
+        // },
       });
     }, 3000);
   }

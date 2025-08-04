@@ -39,6 +39,7 @@ import {
   Healing as HealingIcon,
 } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
+import chatService from '../../services/chatService';
 
 // Advanced animations
 const breathingAnimation = keyframes`
@@ -129,7 +130,7 @@ const SiriLikeAIChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m Aura, your personal AI healthcare companion. I\'m here to provide you with gentle, caring support for all your health needs. How are you feeling today? 💙',
+      text: 'Hello! I\'m Aura, your personal AI healthcare companion. I can help you book appointments, check doctor availability, manage your existing appointments, and provide caring support for your health needs. How can I assist you today? 💙',
       isBot: true,
       timestamp: new Date(),
       type: 'care',
@@ -144,6 +145,18 @@ const SiriLikeAIChat: React.FC = () => {
 
   const quickActions = [
     { 
+      text: "Book an appointment", 
+      icon: <MedicalIcon />, 
+      color: 'primary',
+      emotion: 'supportive'
+    },
+    { 
+      text: "Check doctor availability", 
+      icon: <UserIcon />, 
+      color: 'info',
+      emotion: 'supportive'
+    },
+    { 
       text: "I'm feeling anxious", 
       icon: <PsychologyIcon />, 
       color: 'secondary',
@@ -152,7 +165,7 @@ const SiriLikeAIChat: React.FC = () => {
     { 
       text: "Check my symptoms", 
       icon: <MedicalIcon />, 
-      color: 'primary',
+      color: 'warning',
       emotion: 'reassuring'
     },
     { 
@@ -164,7 +177,7 @@ const SiriLikeAIChat: React.FC = () => {
     { 
       text: "Medication guidance", 
       icon: <PharmacyIcon />, 
-      color: 'info',
+      color: 'success',
       emotion: 'supportive'
     },
   ];
@@ -229,22 +242,89 @@ const SiriLikeAIChat: React.FC = () => {
     setIsLoading(true);
 
     try {
-      setTimeout(() => {
-        const response = getEmpatheticResponse(textToSend, emotion);
+      // Check if this looks like an appointment booking request
+      const lowerText = textToSend.toLowerCase();
+      const isAppointmentRelated = 
+        lowerText.includes('book') || lowerText.includes('appointment') || 
+        lowerText.includes('schedule') || lowerText.includes('doctor') ||
+        lowerText.includes('available') || lowerText.includes('cancel') ||
+        lowerText.includes('reschedule');
+
+      if (isAppointmentRelated) {
+        // Use the chat service for appointment booking
+        const data = await chatService.sendMessage(textToSend);
         
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: response,
-          isBot: true,
-          timestamp: new Date(),
-          type: 'care',
-          emotion: emotion as any,
-        };
-        setMessages(prev => [...prev, botMessage]);
-        setIsLoading(false);
-      }, 2000);
-    } catch (error) {
+        if (data.success) {
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: chatService.formatMessageForDisplay(data.data.message),
+            isBot: true,
+            timestamp: new Date(),
+            type: 'care',
+            emotion: 'supportive',
+          };
+          setMessages(prev => [...prev, botMessage]);
+
+          // If appointment was successfully booked, show a success message
+          if (data.data.actions && data.data.actions.some((action: any) => action.type === 'appointment_booked')) {
+            const appointmentDetails = chatService.extractAppointmentDetails(data.data.actions);
+            if (appointmentDetails) {
+              const successMessage: Message = {
+                id: (Date.now() + 2).toString(),
+                text: `🎉 Great news! Your appointment has been confirmed:\n\n📅 Date: ${appointmentDetails.date}\n⏰ Time: ${appointmentDetails.time}\n👨‍⚕️ Doctor: ${appointmentDetails.doctor}\n📋 Type: ${appointmentDetails.type}\n\nYou'll receive a confirmation email shortly. Is there anything else I can help you with?`,
+                isBot: true,
+                timestamp: new Date(),
+                type: 'care',
+                emotion: 'encouraging',
+              };
+              setTimeout(() => {
+                setMessages(prev => [...prev, successMessage]);
+              }, 1000);
+            }
+          }
+        } else {
+          throw new Error(data.message || 'Failed to get response');
+        }
+      } else {
+        // Use empathetic responses for general health queries
+        setTimeout(() => {
+          const response = getEmpatheticResponse(textToSend, emotion);
+          
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            text: response,
+            isBot: true,
+            timestamp: new Date(),
+            type: 'care',
+            emotion: emotion as any,
+          };
+          setMessages(prev => [...prev, botMessage]);
+        }, 1500);
+      }
+    } catch (error: any) {
       console.error('Chat error:', error);
+      
+      let errorMessage = "I apologize, but I'm having trouble connecting to my appointment system right now. Please try again in a moment. 💙";
+      
+      // Provide more specific error messages
+      if (error.message.includes('authentication') || error.message.includes('token')) {
+        errorMessage = "It looks like your session has expired. Please refresh the page and log in again to continue booking appointments. 🔐";
+      } else if (error.message.includes('network') || error.message.includes('connection')) {
+        errorMessage = "I'm having trouble connecting to the server. Please check your internet connection and try again. 🌐";
+      } else if (isAppointmentRelated) {
+        errorMessage = "I'm temporarily unable to access the appointment system. You can try again in a moment, or contact our support team for immediate assistance. In the meantime, I'm here for general health guidance! 💙";
+      }
+      
+      const fallbackMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: errorMessage,
+        isBot: true,
+        timestamp: new Date(),
+        type: 'care',
+        emotion: 'empathetic',
+      };
+      setMessages(prev => [...prev, fallbackMessage]);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -403,8 +483,8 @@ const SiriLikeAIChat: React.FC = () => {
                   lineHeight: 1.6,
                 }}
               >
-                Your compassionate AI companion for personalized healthcare guidance, 
-                designed with empathy and care for your wellbeing journey
+                Your intelligent healthcare assistant for booking appointments, managing schedules, 
+                and providing compassionate support for all your health needs
               </Typography>
 
               <Stack direction="row" spacing={2} justifyContent="center" flexWrap="wrap">
@@ -480,7 +560,7 @@ const SiriLikeAIChat: React.FC = () => {
               
               <Grid container spacing={2}>
                 {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
+                  <Grid item xs={12} sm={6} md={4} key={index}>
                     <Zoom in={true} timeout={500} style={{ transitionDelay: `${index * 100}ms` }}>
                       <Button
                         fullWidth
