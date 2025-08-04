@@ -1,0 +1,695 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  TextField,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Chip,
+  Avatar,
+  InputAdornment,
+  CircularProgress,
+  Container,
+  Alert,
+  Grid,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
+  Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton
+} from '@mui/material';
+import {
+  LocalPharmacy as PillIcon,
+  Schedule as ClockIcon,
+  Warning as AlertTriangleIcon,
+  CheckCircle as CheckCircleIcon,
+  Add as PlusIcon,
+  Search as SearchIcon,
+  FilterList as FilterIcon,
+  Event as CalendarIcon,
+  Person as UserIcon,
+  Info as InfoIcon,
+  Close as CloseIcon,
+  Medication as MedicationIcon
+} from '@mui/icons-material';
+import medicationsService from '../services/medicationsService';
+import ModernPrescriptionManager from '../components/prescriptions/ModernPrescriptionManager';
+
+interface DetailedMedication {
+  id: string;
+  name: string;
+  genericName: string;
+  brandName: string;
+  form: string;
+  strength: string;
+  category: string;
+  description: string;
+  indications: string[];
+  contraindications: string[];
+  sideEffects: string[];
+  interactions: string[];
+  warnings: string[];
+  dosageInfo: {
+    adult: string;
+    pediatric?: string;
+    elderly?: string;
+  };
+  manufacturer: string;
+}
+
+interface Prescription {
+  id: string;
+  dosage: string;
+  frequency: string;
+  duration: string;
+  instructions: string;
+  quantity: number;
+  refills: number;
+  status: 'active' | 'completed' | 'discontinued' | 'on_hold';
+  startDate: Date;
+  endDate?: Date;
+  notes: string;
+  createdAt: Date;
+  patient: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  doctor: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+  };
+  medication: {
+    id: string;
+    name: string;
+    genericName: string;
+    brandName: string;
+    form: string;
+    strength: string;
+  };
+}
+
+const Medications: React.FC = () => {
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [filteredPrescriptions, setFilteredPrescriptions] = useState<Prescription[]>([]);
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [medicationDetailsDialog, setMedicationDetailsDialog] = useState<{
+    open: boolean;
+    medication: DetailedMedication | null;
+    loading: boolean;
+  }>({
+    open: false,
+    medication: null,
+    loading: false
+  });
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
+
+  useEffect(() => {
+    loadPrescriptions();
+  }, []);
+
+  useEffect(() => {
+    let filtered = prescriptions;
+
+    // Filter by status
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(prescription => prescription.status === filterStatus);
+    }
+
+    // Filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(prescription => 
+        prescription.medication.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prescription.medication.genericName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prescription.medication.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prescription.doctor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prescription.doctor.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredPrescriptions(filtered);
+  }, [prescriptions, filterStatus, searchTerm]);
+
+  const loadPrescriptions = async () => {
+    setLoading(true);
+    console.log('Loading prescriptions...');
+    try {
+      const response = await medicationsService.getAllPrescriptions();
+      console.log('Prescriptions API response:', response);
+      
+      if (response.success && response.data) {
+        const prescriptionsArray = Array.isArray(response.data) ? response.data : [response.data];
+        console.log('Loaded prescriptions:', prescriptionsArray);
+        setPrescriptions(prescriptionsArray);
+        setFilteredPrescriptions(prescriptionsArray);
+        
+        if (prescriptionsArray.length === 0) {
+          console.log('No prescriptions found for current user');
+        }
+      } else {
+        console.error('Failed to load prescriptions:', response.message);
+        showSnackbar(`Failed to load prescriptions: ${response.message || 'Please try again'}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error loading prescriptions:', error);
+      showSnackbar('Network error while loading prescriptions', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleViewMedicationDetails = async (medicationId: string) => {
+    console.log('Fetching medication details for ID:', medicationId);
+    setMedicationDetailsDialog({
+      open: true,
+      medication: null,
+      loading: true
+    });
+
+    try {
+      const response = await medicationsService.getMedicationById(medicationId);
+      console.log('Medication details response:', response);
+      
+      if (response.success && response.data) {
+        const medication = Array.isArray(response.data) ? response.data[0] : response.data;
+        console.log('Processed medication data:', medication);
+        
+        // Ensure all required fields are present with defaults
+        const detailedMedication: DetailedMedication = {
+          id: medication.id || '',
+          name: medication.name || '',
+          genericName: medication.genericName || '',
+          brandName: medication.brandName || medication.genericName || medication.name || '',
+          form: medication.form || '',
+          strength: medication.strength || '',
+          category: medication.category || '',
+          description: medication.description || 'No description available',
+          indications: medication.indications || [],
+          contraindications: medication.contraindications || [],
+          sideEffects: medication.sideEffects || [],
+          interactions: medication.interactions || [],
+          warnings: medication.warnings || [],
+          dosageInfo: medication.dosageInfo || { adult: 'Consult healthcare provider' },
+          manufacturer: medication.manufacturer || 'Unknown'
+        };
+        
+        setMedicationDetailsDialog({
+          open: true,
+          medication: detailedMedication,
+          loading: false
+        });
+      } else {
+        console.error('Failed to fetch medication details:', response.message);
+        showSnackbar(`Failed to load medication details: ${response.message || 'Unknown error'}`, 'error');
+        setMedicationDetailsDialog({ open: false, medication: null, loading: false });
+      }
+    } catch (error) {
+      console.error('Error fetching medication details:', error);
+      showSnackbar('Network error while loading medication details', 'error');
+      setMedicationDetailsDialog({ open: false, medication: null, loading: false });
+    }
+  };
+
+  const handleCloseMedicationDetails = () => {
+    setMedicationDetailsDialog({ open: false, medication: null, loading: false });
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'active':
+        return <CheckCircleIcon sx={{ color: 'success.main' }} />;
+      case 'completed':
+        return <CheckCircleIcon sx={{ color: 'info.main' }} />;
+      case 'discontinued':
+        return <AlertTriangleIcon sx={{ color: 'error.main' }} />;
+      case 'on_hold':
+        return <ClockIcon sx={{ color: 'warning.main' }} />;
+      default:
+        return <ClockIcon sx={{ color: 'grey.500' }} />;
+    }
+  };
+
+  const activePrescriptions = prescriptions.filter(p => p.status === 'active');
+  const completedPrescriptions = prescriptions.filter(p => p.status === 'completed');
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 400 }}>
+        <CircularProgress size={48} />
+      </Box>
+    );
+  }
+
+  return (
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Header */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
+          <Box>
+            <Typography variant="h3" component="h1" sx={{ fontWeight: 'bold', mb: 1 }}>
+              Medications
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              View your current and past prescriptions
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Quick Stats */}
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                    <PillIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Active
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {activePrescriptions.length}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
+                    <CheckCircleIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Completed
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {completedPrescriptions.length}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid item xs={12} md={4}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
+                    <CalendarIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Total
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {prescriptions.length}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
+
+        {/* Filters and Search */}
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+              <TextField
+                fullWidth
+                placeholder="Search medications or doctors..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="small"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 200 }}>
+                <FilterIcon color="action" />
+                <FormControl size="small" fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    label="Status"
+                  >
+                    <MenuItem value="all">All Status</MenuItem>
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="completed">Completed</MenuItem>
+                    <MenuItem value="discontinued">Discontinued</MenuItem>
+                    <MenuItem value="on_hold">On Hold</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Modern Prescription Manager */}
+        <ModernPrescriptionManager 
+          prescriptions={prescriptions}
+          onUpdate={loadPrescriptions}
+        />
+
+        {/* Medication Details Dialog */}
+        <Dialog
+          open={medicationDetailsDialog.open}
+          onClose={handleCloseMedicationDetails}
+          maxWidth="md"
+          fullWidth
+          PaperProps={{
+            sx: { maxHeight: '90vh' }
+          }}
+        >
+          <DialogTitle sx={{ pb: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MedicationIcon color="primary" />
+                <Typography variant="h6">
+                  Medication Details
+                </Typography>
+              </Box>
+              <IconButton
+                onClick={handleCloseMedicationDetails}
+                sx={{ color: 'grey.500' }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          
+          <DialogContent>
+            {medicationDetailsDialog.loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : medicationDetailsDialog.medication ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Basic Information */}
+                <Card variant="outlined">
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'primary.main' }}>
+                      Basic Information
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Brand Name:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.brandName}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Generic Name:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.genericName}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Form:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.form}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Strength:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.strength}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Category:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.category}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Manufacturer:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.manufacturer}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          Description:
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {medicationDetailsDialog.medication.description}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </CardContent>
+                </Card>
+
+                {/* Indications */}
+                {medicationDetailsDialog.medication.indications && medicationDetailsDialog.medication.indications.length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'success.main' }}>
+                        Indications (What it treats)
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {medicationDetailsDialog.medication.indications.map((indication, index) => (
+                          <Chip
+                            key={index}
+                            label={indication}
+                            color="success"
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Dosage Information */}
+                {medicationDetailsDialog.medication.dosageInfo && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'info.main' }}>
+                        Dosage Information
+                      </Typography>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                            Adult:
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {medicationDetailsDialog.medication.dosageInfo.adult}
+                          </Typography>
+                        </Grid>
+                        {medicationDetailsDialog.medication.dosageInfo.pediatric && (
+                          <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                              Pediatric:
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {medicationDetailsDialog.medication.dosageInfo.pediatric}
+                            </Typography>
+                          </Grid>
+                        )}
+                        {medicationDetailsDialog.medication.dosageInfo.elderly && (
+                          <Grid item xs={12} sm={4}>
+                            <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                              Elderly:
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {medicationDetailsDialog.medication.dosageInfo.elderly}
+                            </Typography>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Side Effects */}
+                {medicationDetailsDialog.medication.sideEffects && medicationDetailsDialog.medication.sideEffects.length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'warning.main' }}>
+                        Possible Side Effects
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {medicationDetailsDialog.medication.sideEffects.map((sideEffect, index) => (
+                          <Chip
+                            key={index}
+                            label={sideEffect}
+                            color="warning"
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Contraindications */}
+                {medicationDetailsDialog.medication.contraindications && medicationDetailsDialog.medication.contraindications.length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'error.main' }}>
+                        Contraindications (When NOT to use)
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {medicationDetailsDialog.medication.contraindications.map((contraindication, index) => (
+                          <Chip
+                            key={index}
+                            label={contraindication}
+                            color="error"
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Drug Interactions */}
+                {medicationDetailsDialog.medication.interactions && medicationDetailsDialog.medication.interactions.length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'secondary.main' }}>
+                        Drug Interactions
+                      </Typography>
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {medicationDetailsDialog.medication.interactions.map((interaction, index) => (
+                          <Chip
+                            key={index}
+                            label={interaction}
+                            color="secondary"
+                            variant="outlined"
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Warnings */}
+                {medicationDetailsDialog.medication.warnings && medicationDetailsDialog.medication.warnings.length > 0 && (
+                  <Card variant="outlined">
+                    <CardContent>
+                      <Typography variant="h6" sx={{ mb: 2, color: 'error.main' }}>
+                        Important Warnings
+                      </Typography>
+                      <List dense>
+                        {medicationDetailsDialog.medication.warnings.map((warning, index) => (
+                          <ListItem key={index} sx={{ px: 0 }}>
+                            <ListItemIcon sx={{ minWidth: 32 }}>
+                              <AlertTriangleIcon sx={{ fontSize: 18, color: 'error.main' }} />
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={
+                                <Typography variant="body2" color="text.secondary">
+                                  {warning}
+                                </Typography>
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Important Notice */}
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Important:</strong> This information is for educational purposes only. 
+                    Always consult with your healthcare provider or pharmacist for medical advice 
+                    specific to your condition and before making any changes to your medication regimen.
+                  </Typography>
+                </Alert>
+              </Box>
+            ) : (
+              <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                Unable to load medication details.
+              </Typography>
+            )}
+          </DialogContent>
+          
+          <DialogActions>
+            <Button onClick={handleCloseMedicationDetails} variant="contained">
+              Close
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Snackbar for notifications */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
+      </Box>
+    </Container>
+  );
+};
+
+export default Medications;
