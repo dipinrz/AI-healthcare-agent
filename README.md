@@ -46,3 +46,4 @@ Password: `root`
 2. Install dependencies for backend and frontend
 3. Configure environment variables
 4. Run development servers# HMS
+# AI-healthcare-agent
