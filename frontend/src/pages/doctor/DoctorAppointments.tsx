@@ -249,11 +249,11 @@ const DoctorAppointments: React.FC = () => {
               <Avatar sx={{ bgcolor: 'primary.contrastText', color: 'primary.main', mr: 3, width: 56, height: 56 }}>
                 <MedicalIcon sx={{ fontSize: 32 }} />
               </Avatar>
-              <Box>
-                <Typography variant="h3" sx={{ fontWeight: 'bold', mb: 1 }}>
+              <Box color={'white'}>
+                <Typography variant="h3"color={'white'} sx={{ fontWeight: 'bold', mb: 1 }}>
                   My Appointments
                 </Typography>
-                <Typography variant="h6" sx={{ opacity: 0.9 }}>
+                <Typography variant="h6"color={'white'} sx={{ opacity: 0.9 }}>
                   Manage your patient appointments and consultations
                 </Typography>
               </Box>

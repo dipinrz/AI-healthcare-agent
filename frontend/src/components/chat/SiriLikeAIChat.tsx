@@ -125,7 +125,7 @@ const SiriLikeAIChat: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+  
   const quickActions = [
     { 
       text: "Book an appointment", 
