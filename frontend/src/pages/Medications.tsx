@@ -34,7 +34,6 @@ import {
   Schedule as ClockIcon,
   Warning as AlertTriangleIcon,
   CheckCircle as CheckCircleIcon,
-  Add as PlusIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
   Event as CalendarIcon,
@@ -289,7 +288,7 @@ const Medications: React.FC = () => {
 
         {/* Quick Stats */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -309,7 +308,7 @@ const Medications: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -329,7 +328,7 @@ const Medications: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -411,7 +410,7 @@ const Medications: React.FC = () => {
         ) : (
           <Grid container spacing={3}>
             {filteredPrescriptions.map((prescription) => (
-              <Grid item xs={12} md={6} lg={4} key={prescription.id}>
+              <Grid size={{xs: 12, md: 6, lg: 4}} key={prescription.id}>
                 <Card sx={{ 
                   height: '100%', 
                   transition: 'all 0.3s ease-in-out',
@@ -612,7 +611,7 @@ const Medications: React.FC = () => {
                       Basic Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Brand Name:
                         </Typography>
@@ -620,7 +619,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.brandName}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Generic Name:
                         </Typography>
@@ -628,7 +627,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.genericName}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Form:
                         </Typography>
@@ -636,7 +635,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.form}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Strength:
                         </Typography>
@@ -644,7 +643,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.strength}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Category:
                         </Typography>
@@ -652,7 +651,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.category}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} sm={6}>
+                      <Grid size={{xs: 12, sm: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Manufacturer:
                         </Typography>
@@ -660,7 +659,7 @@ const Medications: React.FC = () => {
                           {medicationDetailsDialog.medication.manufacturer}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12}>
+                      <Grid size={{xs: 12}}>
                         <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                           Description:
                         </Typography>
@@ -702,7 +701,7 @@ const Medications: React.FC = () => {
                         Dosage Information
                       </Typography>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{xs: 12, sm: 4}}>
                           <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                             Adult:
                           </Typography>
@@ -711,7 +710,7 @@ const Medications: React.FC = () => {
                           </Typography>
                         </Grid>
                         {medicationDetailsDialog.medication.dosageInfo.pediatric && (
-                          <Grid item xs={12} sm={4}>
+                          <Grid size={{xs: 12, sm: 4}}>
                             <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                               Pediatric:
                             </Typography>
@@ -721,7 +720,7 @@ const Medications: React.FC = () => {
                           </Grid>
                         )}
                         {medicationDetailsDialog.medication.dosageInfo.elderly && (
-                          <Grid item xs={12} sm={4}>
+                          <Grid size={{xs: 12, sm: 4}}>
                             <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                               Elderly:
                             </Typography>

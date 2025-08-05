@@ -17,23 +17,16 @@ import {
   Zoom,
   useTheme,
   alpha,
-  Backdrop,
-  Card,
-  CardContent,
   Stack,
 } from '@mui/material';
 import {
   Send as SendIcon,
   Person as UserIcon,
-  SmartToy as BotIcon,
   AutoAwesome as SparkleIcon,
   MedicalServices as MedicalIcon,
   Psychology as PsychologyIcon,
   Favorite as HeartIcon,
   LocalPharmacy as PharmacyIcon,
-  Mic as MicIcon,
-  VolumeUp as VolumeIcon,
-  Close as CloseIcon,
   Lightbulb as LightbulbIcon,
   Support as SupportIcon,
   Healing as HealingIcon,
@@ -80,15 +73,6 @@ const floatingParticles = keyframes`
   100% {
     transform: translateY(-100px) rotate(180deg);
     opacity: 0;
-  }
-`;
-
-const typewriterAnimation = keyframes`
-  from {
-    width: 0;
-  }
-  to {
-    width: 100%;
   }
 `;
 
@@ -139,7 +123,6 @@ const SiriLikeAIChat: React.FC = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -241,14 +224,15 @@ const SiriLikeAIChat: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
 
+    // Check if this looks like an appointment booking request
+    const lowerText = textToSend.toLowerCase();
+    const isAppointmentRelated = 
+      lowerText.includes('book') || lowerText.includes('appointment') || 
+      lowerText.includes('schedule') || lowerText.includes('doctor') ||
+      lowerText.includes('available') || lowerText.includes('cancel') ||
+      lowerText.includes('reschedule');
+
     try {
-      // Check if this looks like an appointment booking request
-      const lowerText = textToSend.toLowerCase();
-      const isAppointmentRelated = 
-        lowerText.includes('book') || lowerText.includes('appointment') || 
-        lowerText.includes('schedule') || lowerText.includes('doctor') ||
-        lowerText.includes('available') || lowerText.includes('cancel') ||
-        lowerText.includes('reschedule');
 
       if (isAppointmentRelated) {
         // Use the chat service for appointment booking
@@ -331,6 +315,18 @@ const SiriLikeAIChat: React.FC = () => {
 
   const handleQuickAction = (action: any) => {
     handleSendMessage(action.text, action.emotion);
+  };
+
+  const getActionColor = (colorName: string) => {
+    switch(colorName) {
+      case 'primary': return theme.palette.primary;
+      case 'secondary': return theme.palette.secondary;
+      case 'error': return theme.palette.error;
+      case 'success': return theme.palette.success;
+      case 'warning': return theme.palette.warning;
+      case 'info': return theme.palette.info;
+      default: return theme.palette.primary;
+    }
   };
 
   const getMessageBackground = (message: Message) => {
@@ -560,7 +556,7 @@ const SiriLikeAIChat: React.FC = () => {
               
               <Grid container spacing={2}>
                 {quickActions.map((action, index) => (
-                  <Grid item xs={12} sm={6} md={4} key={index}>
+                  <Grid size={{xs: 12, sm: 6, md: 4}} key={index}>
                     <Zoom in={true} timeout={500} style={{ transitionDelay: `${index * 100}ms` }}>
                       <Button
                         fullWidth
@@ -575,17 +571,17 @@ const SiriLikeAIChat: React.FC = () => {
                           justifyContent: 'flex-start',
                           textTransform: 'none',
                           fontWeight: 600,
-                          border: `2px solid ${alpha(theme.palette[action.color as keyof typeof theme.palette].main as string, 0.3)}`,
+                          border: `2px solid ${alpha(getActionColor(action.color).main, 0.3)}`,
                           background: `linear-gradient(135deg, 
-                            ${alpha(theme.palette[action.color as keyof typeof theme.palette].main as string, 0.05)} 0%, 
-                            ${alpha(theme.palette[action.color as keyof typeof theme.palette].light as string, 0.02)} 100%)`,
+                            ${alpha(getActionColor(action.color).main, 0.05)} 0%, 
+                            ${alpha(getActionColor(action.color).light, 0.02)} 100%)`,
                           '&:hover': {
                             transform: 'translateY(-4px) scale(1.02)',
-                            border: `2px solid ${theme.palette[action.color as keyof typeof theme.palette].main}`,
+                            border: `2px solid ${getActionColor(action.color).main}`,
                             background: `linear-gradient(135deg, 
-                              ${alpha(theme.palette[action.color as keyof typeof theme.palette].main as string, 0.1)} 0%, 
-                              ${alpha(theme.palette[action.color as keyof typeof theme.palette].light as string, 0.05)} 100%)`,
-                            boxShadow: `0 8px 25px ${alpha(theme.palette[action.color as keyof typeof theme.palette].main as string, 0.25)}`,
+                              ${alpha(getActionColor(action.color).main, 0.1)} 0%, 
+                              ${alpha(getActionColor(action.color).light, 0.05)} 100%)`,
+                            boxShadow: `0 8px 25px ${alpha(getActionColor(action.color).main, 0.25)}`,
                           },
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}

@@ -38,7 +38,6 @@ import {
   CheckCircle as CheckIcon,
   Cancel as CancelIcon,
   Schedule as ScheduleIcon,
-  Add as AddIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
   MedicalServices as MedicalIcon,
@@ -46,7 +45,6 @@ import {
 } from '@mui/icons-material';
 import appointmentService from '../../services/appointmentService';
 import type { Appointment } from '../../services/appointmentService';
-import { authService } from '../../services/authService';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -94,7 +92,6 @@ const DoctorAppointments: React.FC = () => {
   });
   const [error, setError] = useState<string>('');
 
-  const user = authService.getCurrentUser();
 
   useEffect(() => {
     loadAppointments();
@@ -284,7 +281,7 @@ const DoctorAppointments: React.FC = () => {
 
         {/* Quick Stats */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={3}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card elevation={3}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -304,7 +301,7 @@ const DoctorAppointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card elevation={3}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -324,7 +321,7 @@ const DoctorAppointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={3}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card elevation={3}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -344,7 +341,7 @@ const DoctorAppointments: React.FC = () => {
             </Card>
           </Grid>
 
-          <Grid item xs={12} md={3}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card elevation={3}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -368,7 +365,7 @@ const DoctorAppointments: React.FC = () => {
         {/* Appointments Tabs */}
         <Card>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs value={tabValue} onChange={(e, newValue) => setTabValue(newValue)}>
+            <Tabs value={tabValue} onChange={(_, newValue) => setTabValue(newValue)}>
               <Tab label={`Today (${todayAppointments.length})`} />
               <Tab label={`Upcoming (${upcomingAppointments.length})`} />
               <Tab label={`Past (${pastAppointments.length})`} />
@@ -682,7 +679,7 @@ const DoctorAppointments: React.FC = () => {
           </DialogTitle>
           <DialogContent sx={{ mt: 2 }}>
             <Grid container spacing={3}>
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <FormControl fullWidth>
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -699,7 +696,7 @@ const DoctorAppointments: React.FC = () => {
                 </FormControl>
               </Grid>
               
-              <Grid item xs={12} md={6}>
+              <Grid size={{xs: 12, md: 6}}>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Duration: {updateDialog.appointment?.duration || 30} minutes
                 </Typography>
@@ -709,7 +706,7 @@ const DoctorAppointments: React.FC = () => {
               </Grid>
 
               {updateDialog.appointment?.reason && (
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Alert severity="info">
                     <Typography variant="body2">
                       <strong>Reason for visit:</strong> {updateDialog.appointment.reason}
@@ -719,7 +716,7 @@ const DoctorAppointments: React.FC = () => {
               )}
 
               {updateDialog.appointment?.symptoms && (
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <Alert severity="warning">
                     <Typography variant="body2">
                       <strong>Reported symptoms:</strong> {updateDialog.appointment.symptoms}
@@ -728,7 +725,7 @@ const DoctorAppointments: React.FC = () => {
                 </Grid>
               )}
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   label="Diagnosis"
                   multiline
@@ -740,7 +737,7 @@ const DoctorAppointments: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   label="Treatment Plan"
                   multiline
@@ -752,7 +749,7 @@ const DoctorAppointments: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   label="Follow-up Instructions"
                   multiline
@@ -764,7 +761,7 @@ const DoctorAppointments: React.FC = () => {
                 />
               </Grid>
 
-              <Grid item xs={12}>
+              <Grid size={{xs: 12}}>
                 <TextField
                   label="Additional Notes"
                   multiline

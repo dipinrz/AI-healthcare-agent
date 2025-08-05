@@ -1,5 +1,5 @@
 import { authService } from './authService';
-import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_CONFIG } from '../config/api';
 
 export interface Medication {
   id: string;

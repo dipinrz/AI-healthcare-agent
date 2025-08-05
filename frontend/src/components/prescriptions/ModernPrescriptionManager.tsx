@@ -21,17 +21,14 @@ import {
   LinearProgress,
   Fade,
   Zoom,
-  Slide,
   useTheme,
   alpha,
-  Backdrop,
 } from '@mui/material';
 import {
   Medication as MedicationIcon,
   Schedule as ScheduleIcon,
   Notifications as NotificationsIcon,
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   PlayArrow as PlayIcon,
   AutoAwesome as SparkleIcon,
@@ -99,8 +96,7 @@ interface ModernPrescriptionManagerProps {
 }
 
 const ModernPrescriptionManager: React.FC<ModernPrescriptionManagerProps> = ({ 
-  prescriptions,
-  onUpdate 
+  prescriptions
 }) => {
   const theme = useTheme();
   const [medications, setMedications] = useState<PrescriptionMedication[]>([]);
@@ -175,6 +171,17 @@ const ModernPrescriptionManager: React.FC<ModernPrescriptionManagerProps> = ({
     if (medication.frequency.includes('emergency') || medication.frequency.includes('critical')) return 'error';
     if (medication.frequency.includes('daily')) return 'primary';
     return 'secondary';
+  };
+
+  const getPriorityColorPalette = (medication: PrescriptionMedication) => {
+    const colorName = getPriorityColor(medication);
+    switch(colorName) {
+      case 'primary': return theme.palette.primary;
+      case 'secondary': return theme.palette.secondary;
+      case 'error': return theme.palette.error;
+      case 'grey': return { main: theme.palette.grey[500], light: theme.palette.grey[300] };
+      default: return theme.palette.primary;
+    }
   };
 
   const handleSetupReminders = (medication: PrescriptionMedication) => {
@@ -385,7 +392,7 @@ const ModernPrescriptionManager: React.FC<ModernPrescriptionManagerProps> = ({
       ) : (
         <Grid container spacing={3}>
           {medications.map((medication, index) => (
-            <Grid item xs={12} md={6} lg={4} key={medication.id}>
+            <Grid size={{xs: 12, md: 6, lg: 4}} key={medication.id}>
               <Fade in={true} timeout={600} style={{ transitionDelay: `${index * 150}ms` }}>
                 <Card
                   elevation={0}
@@ -432,7 +439,7 @@ const ModernPrescriptionManager: React.FC<ModernPrescriptionManagerProps> = ({
                           mr: 2,
                           width: 56,
                           height: 56,
-                          boxShadow: `0 4px 20px ${alpha(theme.palette[getPriorityColor(medication) as keyof typeof theme.palette].main as string, 0.3)}`,
+                          boxShadow: `0 4px 20px ${alpha(getPriorityColorPalette(medication).main, 0.3)}`,
                         }}
                       >
                         <MedicationIcon sx={{ fontSize: 28 }} />

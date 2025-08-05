@@ -24,7 +24,6 @@ import {
   Paper,
   List,
   ListItem,
-  ListItemText,
   ListItemAvatar,
   Alert
 } from '@mui/material';
@@ -255,7 +254,7 @@ const ChatSessions: React.FC = () => {
 
         {/* Stats */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -275,7 +274,7 @@ const ChatSessions: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -295,7 +294,7 @@ const ChatSessions: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -363,7 +362,7 @@ const ChatSessions: React.FC = () => {
           ) : (
             <Grid container spacing={3}>
               {filteredSessions.map((session, index) => (
-                <Grid item xs={12} md={6} lg={4} key={session.id}>
+                <Grid size={{xs: 12, md: 6, lg: 4}} key={session.id}>
                   <Fade in={true} timeout={500} style={{ transitionDelay: `${index * 100}ms` }}>
                     <Card 
                       elevation={3}
@@ -533,7 +532,7 @@ const ChatSessions: React.FC = () => {
                   }}
                 >
                   <List sx={{ p: 0 }}>
-                    {selectedSession.messages.map((message, index) => (
+                    {selectedSession.messages.map((message) => (
                       <ListItem 
                         key={message.id}
                         sx={{ 

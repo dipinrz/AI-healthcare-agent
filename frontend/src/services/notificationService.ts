@@ -17,8 +17,8 @@ export interface FollowUpReminder {
 }
 
 class NotificationService {
-  private medicationTimers: Map<string, NodeJS.Timeout> = new Map();
-  private followUpTimers: Map<string, NodeJS.Timeout> = new Map();
+  private medicationTimers: Map<string, number> = new Map();
+  private followUpTimers: Map<string, number> = new Map();
 
   // Medication reminder methods
   showMedicationReminder(medication: MedicationReminder) {
@@ -40,7 +40,7 @@ class NotificationService {
 
     // Create a separate action toast for the "Mark as Taken" button
     setTimeout(() => {
-      toast((t:any) => (
+      toast(() => (
         `Mark ${medication.medicationName} as taken?`
       ), {
         duration: 25000,
@@ -81,7 +81,7 @@ class NotificationService {
 
     // Create a separate action toast for booking
     setTimeout(() => {
-      toast((t:any) => (
+      toast(() => (
         `Book follow-up with ${followUp.doctorName}?`
       ), {
         duration: 40000,
@@ -154,36 +154,7 @@ class NotificationService {
     }
   }
 
-  // Handle user actions
-  private markMedicationTaken(medicationId: string) {
-    // Here you could call an API to log medication taken
-    toast.success('✅ Medication marked as taken!', {
-      position: 'top-right',
-      duration: 3000,
-    });
-    
-    // Store in localStorage for now
-    const takenMeds = JSON.parse(localStorage.getItem('takenMedications') || '[]');
-    takenMeds.push({
-      medicationId,
-      takenAt: new Date().toISOString()
-    });
-    localStorage.setItem('takenMedications', JSON.stringify(takenMeds));
-  }
-
-  private bookFollowUpAppointment(followUp: FollowUpReminder) {
-    // Navigate to appointments booking page or show booking modal
-    toast.success('📅 Redirecting to appointment booking...', {
-      position: 'top-right',
-      duration: 3000,
-    });
-    
-    // Store follow-up request
-    localStorage.setItem('pendingFollowUp', JSON.stringify(followUp));
-    
-    // In a real app, you would navigate to the appointments page
-    // window.location.href = '/appointments/book';
-  }
+  // Handle user actions (implemented as needed)
 
   private playNotificationSound() {
     try {
@@ -248,5 +219,3 @@ class NotificationService {
 export const notificationService = new NotificationService();
 export default notificationService;
 
-// Export interfaces for use in other components
-export type { MedicationReminder, FollowUpReminder };

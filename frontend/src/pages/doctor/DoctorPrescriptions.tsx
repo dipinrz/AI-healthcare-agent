@@ -38,7 +38,6 @@ import {
 } from '@mui/icons-material';
 import medicationsService from '../../services/medicationsService';
 import patientsService from '../../services/patientsService';
-import { authService } from '../../services/authService';
 import EnvChecker from '../../components/debug/EnvChecker';
 
 interface Medication {
@@ -143,7 +142,6 @@ const DoctorPrescriptions: React.FC = () => {
     medication: Medication | null;
   }>({ open: false, medication: null });
 
-  const user = authService.getCurrentUser();
 
   useEffect(() => {
     loadData();
@@ -316,7 +314,7 @@ const DoctorPrescriptions: React.FC = () => {
 
         {/* Quick Stats */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -336,7 +334,7 @@ const DoctorPrescriptions: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -356,7 +354,7 @@ const DoctorPrescriptions: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -426,7 +424,7 @@ const DoctorPrescriptions: React.FC = () => {
                         </Box>
 
                         <Grid container spacing={3}>
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{xs: 12, md: 6}}>
                             <Typography variant="h6" sx={{ mb: 1 }}>
                               {prescription.medication.brandName || prescription.medication.name}
                             </Typography>
@@ -452,7 +450,7 @@ const DoctorPrescriptions: React.FC = () => {
                             </Typography>
                           </Grid>
 
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{xs: 12, md: 6}}>
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                                 Duration: {prescription.duration}
@@ -508,12 +506,12 @@ const DoctorPrescriptions: React.FC = () => {
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Autocomplete
                     options={patients}
                     getOptionLabel={(patient) => `${patient.firstName} ${patient.lastName} (${patient.email})`}
                     value={addDialog.selectedPatient}
-                    onChange={(event, value) => setAddDialog(prev => ({ ...prev, selectedPatient: value }))}
+                    onChange={(_, value) => setAddDialog(prev => ({ ...prev, selectedPatient: value }))}
                     renderInput={(params) => (
                       <TextField 
                         {...params} 
@@ -533,13 +531,13 @@ const DoctorPrescriptions: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Autocomplete
                       options={medications}
                       getOptionLabel={(medication) => `${medication.name} (${medication.form} ${medication.strength})`}
                       value={addDialog.selectedMedication}
-                      onChange={(event, value) => setAddDialog(prev => ({ ...prev, selectedMedication: value }))}
+                      onChange={(_, value) => setAddDialog(prev => ({ ...prev, selectedMedication: value }))}
                       renderInput={(params) => (
                         <TextField 
                           {...params} 
@@ -575,7 +573,7 @@ const DoctorPrescriptions: React.FC = () => {
               </Grid>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     label="Dosage"
                     value={addDialog.dosage}
@@ -585,7 +583,7 @@ const DoctorPrescriptions: React.FC = () => {
                     fullWidth
                   />
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <FormControl fullWidth required>
                     <InputLabel>Frequency</InputLabel>
                     <Select
@@ -601,7 +599,7 @@ const DoctorPrescriptions: React.FC = () => {
                     </Select>
                   </FormControl>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <TextField
                     label="Duration"
                     value={addDialog.duration}
@@ -614,7 +612,7 @@ const DoctorPrescriptions: React.FC = () => {
               </Grid>
 
               <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <TextField
                     label="Quantity"
                     type="number"
@@ -625,7 +623,7 @@ const DoctorPrescriptions: React.FC = () => {
                     inputProps={{ min: 1 }}
                   />
                 </Grid>
-                <Grid item xs={12} md={6}>
+                <Grid size={{xs: 12, md: 6}}>
                   <TextField
                     label="Refills"
                     type="number"
@@ -699,7 +697,7 @@ const DoctorPrescriptions: React.FC = () => {
                       Basic Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{xs: 12, md: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>Category:</Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                           {medicationDetailsDialog.medication.category}
@@ -709,7 +707,7 @@ const DoctorPrescriptions: React.FC = () => {
                           {medicationDetailsDialog.medication.manufacturer}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} md={6}>
+                      <Grid size={{xs: 12, md: 6}}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>Description:</Typography>
                         <Typography variant="body2" color="text.secondary">
                           {medicationDetailsDialog.medication.description}
@@ -748,14 +746,14 @@ const DoctorPrescriptions: React.FC = () => {
                       Dosage Information
                     </Typography>
                     <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{xs: 12, md: 4}}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>Adult Dose:</Typography>
                         <Typography variant="body2" color="text.secondary">
                           {medicationDetailsDialog.medication.dosageInfo.adult}
                         </Typography>
                       </Grid>
                       {medicationDetailsDialog.medication.dosageInfo.pediatric && (
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{xs: 12, md: 4}}>
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>Pediatric Dose:</Typography>
                           <Typography variant="body2" color="text.secondary">
                             {medicationDetailsDialog.medication.dosageInfo.pediatric}
@@ -763,7 +761,7 @@ const DoctorPrescriptions: React.FC = () => {
                         </Grid>
                       )}
                       {medicationDetailsDialog.medication.dosageInfo.elderly && (
-                        <Grid item xs={12} md={4}>
+                        <Grid size={{xs: 12, md: 4}}>
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>Elderly Dose:</Typography>
                           <Typography variant="body2" color="text.secondary">
                             {medicationDetailsDialog.medication.dosageInfo.elderly}

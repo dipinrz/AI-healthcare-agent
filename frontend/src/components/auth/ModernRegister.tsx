@@ -28,7 +28,6 @@ import {
   Stack,
 } from "@mui/material";
 import {
-  Favorite as HeartIcon,
   Email as EmailIcon,
   Lock as LockIcon,
   Person as UserIcon,
@@ -247,7 +246,7 @@ const ModernRegister: React.FC = () => {
                 👋 Tell us about yourself
               </Typography>
               <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <TextField
                     fullWidth
                     id="firstName"
@@ -277,7 +276,7 @@ const ModernRegister: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <TextField
                     fullWidth
                     id="lastName"
@@ -300,7 +299,7 @@ const ModernRegister: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <TextField
                     fullWidth
                     id="dateOfBirth"
@@ -329,7 +328,7 @@ const ModernRegister: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12} sm={6}>
+                <Grid size={{xs: 12, sm: 6}}>
                   <TextField
                     fullWidth
                     id="gender"
@@ -373,7 +372,7 @@ const ModernRegister: React.FC = () => {
                 📞 How can we reach you?
               </Typography>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     id="email"
@@ -401,7 +400,7 @@ const ModernRegister: React.FC = () => {
                     }}
                   />
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     id="phone"
@@ -443,7 +442,7 @@ const ModernRegister: React.FC = () => {
                 🔐 Secure your account
               </Typography>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     id="password"
@@ -504,7 +503,7 @@ const ModernRegister: React.FC = () => {
                     </Box>
                   )}
                 </Grid>
-                <Grid item xs={12}>
+                <Grid size={{xs: 12}}>
                   <TextField
                     fullWidth
                     id="confirmPassword"
@@ -642,9 +641,8 @@ const ModernRegister: React.FC = () => {
                     mx: 'auto',
                     mb: 3,
                     background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-                    animation: `${breathingAnimation} 4s ease-in-out infinite`,
+                    animation: `${breathingAnimation} 4s ease-in-out infinite, ${pulseGlow} 3s ease-in-out infinite`,
                     boxShadow: `0 8px 32px ${alpha(theme.palette.primary.main, 0.3)}`,
-                    animation: `${pulseGlow} 3s ease-in-out infinite`,
                   }}
                 >
                   <HealingIcon sx={{ fontSize: 40 }} />

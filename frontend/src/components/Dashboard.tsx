@@ -14,7 +14,6 @@ import {
   ListItemText,
   Container,
   Paper,
-  Divider,
   Grid
 } from '@mui/material';
 import {
@@ -283,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
             </Box>
             <Box sx={{ p: 3 }}>
               <Grid container spacing={2}>
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <Button
                     component={Link}
                     to="/chat"
@@ -309,7 +308,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </Button>
                 </Grid>
                 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <Button
                     variant="outlined"
                     fullWidth
@@ -333,7 +332,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user }) => {
                   </Button>
                 </Grid>
                 
-                <Grid item xs={12} md={4}>
+                <Grid size={{xs: 12, md: 4}}>
                   <Button
                     variant="outlined"
                     fullWidth

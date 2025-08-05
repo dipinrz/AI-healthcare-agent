@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  TextField,
   Grid,
   Typography,
   Box,
@@ -174,7 +173,7 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({
               Current Appointment
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2">
                   <strong>Doctor:</strong> Dr. {appointment.doctor.firstName} {appointment.doctor.lastName}
                 </Typography>
@@ -182,7 +181,7 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({
                   <strong>Specialization:</strong> {appointment.doctor.specialization}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2">
                   <strong>Current Date:</strong> {appointmentService.formatAppointmentDate(appointment.appointmentDate)}
                 </Typography>
@@ -200,14 +199,18 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({
         </Typography>
         
         <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
+          <Grid size={{xs: 12, md: 6}}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
               <DatePicker
                 label="Select New Date"
                 value={selectedDate}
                 onChange={(newValue) => setSelectedDate(newValue)}
                 minDate={new Date()}
-                renderInput={(params) => <TextField {...params} fullWidth />}
+                slotProps={{
+                  textField: {
+                    fullWidth: true
+                  }
+                }}
               />
             </LocalizationProvider>
           </Grid>
@@ -227,7 +230,7 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({
             ) : availableSlots.length > 0 ? (
               <Grid container spacing={1}>
                 {availableSlots.map((slot, index) => (
-                  <Grid item xs={6} sm={4} md={3} key={index}>
+                  <Grid size={{xs: 6, sm: 4, md: 3}} key={index}>
                     <Button
                       variant={selectedSlot?.time.getTime() === slot.time.getTime() ? 'contained' : 'outlined'}
                       onClick={() => setSelectedSlot(slot)}

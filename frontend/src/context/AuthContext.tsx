@@ -1,26 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authService } from '../services/authService';
-
-interface User {
-  id: string;
-  email: string;
-  role: 'patient' | 'doctor' | 'admin';
-  patient?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-  };
-  doctor?: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    specialization: string;
-  };
-}
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { authService, type User } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;

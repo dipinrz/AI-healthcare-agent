@@ -28,7 +28,7 @@ import {
   AccessTime as TimeIcon,
   LocalHospital as MedicalIcon
 } from '@mui/icons-material';
-import { DatePicker, TimePicker } from '@mui/x-date-pickers';
+import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import appointmentService from '../../services/appointmentService';
@@ -282,22 +282,22 @@ const BookingModal: React.FC<BookingModalProps> = ({
             </Box>
             <Divider sx={{ my: 1 }} />
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Department:</strong> {selectedDoctor.department}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Qualification:</strong> {selectedDoctor.qualification}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Phone:</strong> {selectedDoctor.phone}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2" color="text.secondary">
                   <strong>Email:</strong> {selectedDoctor.email}
                 </Typography>
@@ -317,19 +317,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
       </Typography>
       
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DatePicker
               label="Select Date"
               value={selectedDate}
               onChange={(newValue) => setSelectedDate(newValue)}
               minDate={new Date()}
-              renderInput={(params) => <TextField {...params} fullWidth />}
+              slotProps={{
+                textField: {
+                  fullWidth: true
+                }
+              }}
             />
           </LocalizationProvider>
         </Grid>
         
-        <Grid item xs={12} md={6}>
+        <Grid size={{xs: 12, md: 6}}>
           <FormControl fullWidth>
             <InputLabel>Duration</InputLabel>
             <Select
@@ -359,7 +363,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           ) : availableSlots.length > 0 ? (
             <Grid container spacing={1}>
               {availableSlots.map((slot, index) => (
-                <Grid item xs={6} sm={4} md={3} key={index}>
+                <Grid size={{xs: 6, sm: 4, md: 3}} key={index}>
                   <Button
                     variant={selectedSlot?.time.getTime() === slot.time.getTime() ? 'contained' : 'outlined'}
                     onClick={() => setSelectedSlot(slot)}
@@ -388,7 +392,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
       </Typography>
       
       <Grid container spacing={2}>
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <FormControl fullWidth>
             <InputLabel>Appointment Type</InputLabel>
             <Select
@@ -404,7 +408,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           </FormControl>
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <TextField
             fullWidth
             label="Reason for Visit *"
@@ -416,7 +420,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
           />
         </Grid>
         
-        <Grid item xs={12}>
+        <Grid size={{xs: 12}}>
           <TextField
             fullWidth
             label="Current Symptoms (Optional)"
@@ -435,7 +439,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
               Appointment Summary
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2">
                   <strong>Doctor:</strong> Dr. {selectedDoctor.firstName} {selectedDoctor.lastName}
                 </Typography>
@@ -443,7 +447,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
                   <strong>Specialization:</strong> {selectedDoctor.specialization}
                 </Typography>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid size={{xs: 12, sm: 6}}>
                 <Typography variant="body2">
                   <strong>Date:</strong> {appointmentService.formatAppointmentDate(selectedSlot.time)}
                 </Typography>

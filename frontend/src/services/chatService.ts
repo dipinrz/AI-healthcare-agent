@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 export interface ChatMessage {
   id: string;
@@ -53,7 +53,7 @@ class ChatService {
         { message },
         { headers: this.getAuthHeaders() }
       );
-      return response.data;
+      return response.data as ChatResponse;
     } catch (error: any) {
       console.error('Chat service error:', error);
       throw new Error(
@@ -70,7 +70,7 @@ class ChatService {
         buildApiUrl(API_ENDPOINTS.CHAT.GET_HISTORY),
         { headers: this.getAuthHeaders() }
       );
-      return response.data;
+      return response.data as ChatHistory;
     } catch (error: any) {
       console.error('Chat history service error:', error);
       throw new Error(

@@ -11,9 +11,6 @@ import {
   Container,
   Grid,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
   Tabs,
   Tab,
@@ -32,19 +29,13 @@ import {
   Fab,
   Badge,
   Alert,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Stack,
   Divider,
-  LinearProgress
 } from '@mui/material';
 import {
   Description as FileTextIcon,
   Timeline as ActivityIcon,
   Favorite as HeartIcon,
-  Thermostat as ThermometerIcon,
-  FitnessCenter as WeightIcon,
   Visibility as EyeIcon,
   Download as DownloadIcon,
   Upload as UploadIcon,
@@ -54,16 +45,12 @@ import {
   Event as CalendarIcon,
   Person as PersonIcon,
   Phone as PhoneIcon,
-  Email as EmailIcon,
   LocationOn as LocationIcon,
   AccessTime as TimeIcon,
   Medication as PillIcon,
-  ExpandMore as ExpandMoreIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Warning as WarningIcon,
-  CheckCircle as CheckIcon,
-  Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import patientService from '../services/patientService';
 import { authService } from '../services/authService';
@@ -168,7 +155,6 @@ const HealthRecords: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [prescriptionDialog, setPrescriptionDialog] = useState(false);
-  const [patientData, setPatientData] = useState<any>(null);
   const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
   const [patientPrescriptions, setPatientPrescriptions] = useState<any[]>([]);
   const [error, setError] = useState<string>('');
@@ -193,7 +179,6 @@ const HealthRecords: React.FC = () => {
           const patientsResponse = await patientService.getPatients({ search: user.email });
           if (patientsResponse.success && patientsResponse.data && Array.isArray(patientsResponse.data) && patientsResponse.data.length > 0) {
             currentPatientId = patientsResponse.data[0].id;
-            setPatientData(patientsResponse.data[0]);
           }
         }
 
@@ -237,8 +222,8 @@ const HealthRecords: React.FC = () => {
                 testName: lr.testName,
                 value: lr.value,
                 unit: lr.unit,
-                referenceRange: lr.referenceRange,
-                status: lr.status,
+                referenceRange: lr.referenceRange || 'N/A',
+                status: lr.status === 'abnormal' || lr.status === 'pending' ? 'normal' : lr.status,
                 date: lr.testDate,
                 orderedBy: lr.orderedBy ? `${lr.orderedBy.firstName} ${lr.orderedBy.lastName}` : 'Unknown',
                 notes: lr.notes
@@ -246,30 +231,13 @@ const HealthRecords: React.FC = () => {
               documents: healthRecordResponse.data.documents.map(doc => ({
                 id: doc.id,
                 name: doc.name,
-                type: healthRecordsService.getDocumentTypeLabel(doc.type),
+                type: (doc.type as 'prescription' | 'lab_result' | 'imaging' | 'report' | 'other') || 'other',
                 date: doc.documentDate,
                 doctor: doc.createdBy ? `${doc.createdBy.firstName} ${doc.createdBy.lastName}` : 'Unknown',
-                url: `/api/documents/${doc.id}`
+                url: `/api/documents/${doc.id}`,
+                uploadDate: doc.documentDate,
+                size: '0 KB'
               })),
-              profile: {
-                id: healthRecordResponse.data.patient.id,
-                firstName: healthRecordResponse.data.patient.firstName,
-                lastName: healthRecordResponse.data.patient.lastName,
-                dateOfBirth: healthRecordResponse.data.patient.dateOfBirth,
-                gender: healthRecordResponse.data.patient.gender,
-                bloodType: 'O+', // Mock data since not in patient model
-                allergies: healthRecordResponse.data.patient.allergies || [],
-                emergencyContact: {
-                  name: healthRecordResponse.data.patient.emergencyContact || 'Not specified',
-                  relationship: 'Emergency Contact',
-                  phone: healthRecordResponse.data.patient.phone
-                },
-                insuranceInfo: {
-                  provider: 'Health Insurance',
-                  policyNumber: 'POL12345678',
-                  groupNumber: 'GRP001'
-                }
-              },
               prescriptions: patientPrescriptions.length > 0 ? patientPrescriptions.map(p => ({
                 id: p.id,
                 date: p.prescribedDate || new Date(),
@@ -279,12 +247,13 @@ const HealthRecords: React.FC = () => {
                   {
                     id: p.medication?.id || p.id,
                     name: p.medication?.name || 'Unknown Medication',
-                    genericName: p.medication?.genericName || p.medication?.name || 'Unknown',
                     dosage: p.dosage || 'As prescribed',
                     frequency: p.frequency || 'As directed',
                     instructions: p.instructions || 'Take as directed by physician',
                     sideEffects: p.medication?.sideEffects || [],
-                    category: p.medication?.category || 'Medication'
+                    category: p.medication?.category || 'Medication',
+                    startDate: p.startDate || new Date(),
+                    prescribedBy: p.doctor ? `${p.doctor.firstName} ${p.doctor.lastName}` : 'Unknown Doctor'
                   }
                 ],
                 diagnosis: p.diagnosis || 'Not specified',
@@ -300,12 +269,13 @@ const HealthRecords: React.FC = () => {
                     {
                       id: '1',
                       name: 'Lisinopril',
-                      genericName: 'Lisinopril',
                       dosage: '10mg',
                       frequency: 'Once daily',
                       instructions: 'Take with or without food, preferably at the same time each day',
                       sideEffects: ['Dizziness', 'Dry cough', 'Headache'],
-                      category: 'ACE Inhibitor'
+                      category: 'ACE Inhibitor',
+                      startDate: new Date('2024-02-10'),
+                      prescribedBy: 'Dr. Sarah Johnson'
                     }
                   ],
                   diagnosis: 'Hypertension',
@@ -325,7 +295,9 @@ const HealthRecords: React.FC = () => {
                 doctorName: a.doctor ? `${a.doctor.firstName} ${a.doctor.lastName}` : 'Unknown Doctor',
                 type: a.type?.replace('_', ' ') || 'Consultation',
                 status: a.status || 'scheduled',
-                reason: a.reason || 'Medical consultation'
+                reason: a.reason || 'Medical consultation',
+                specialty: a.doctor?.specialization || 'General Medicine',
+                location: a.location || 'Main Clinic'
               })) : [
                 {
                   id: '1',
@@ -335,9 +307,14 @@ const HealthRecords: React.FC = () => {
                   doctorName: 'Dr. Sarah Johnson',
                   type: 'Follow-up',
                   status: 'scheduled',
-                  reason: 'Blood pressure check and medication review'
+                  reason: 'Blood pressure check and medication review',
+                  specialty: 'Cardiology',
+                  location: 'Main Clinic'
                 }
-              ]
+              ],
+              allergies: [],
+              chronicConditions: [],
+              emergencyContacts: []
             };
 
             setHealthRecord(realHealthRecord);
@@ -619,7 +596,7 @@ const HealthRecords: React.FC = () => {
     }
   };
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: string) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setActiveTab(newValue as any);
   };
 
@@ -790,7 +767,7 @@ const HealthRecords: React.FC = () => {
         {activeTab === 'overview' && (
           <Grid container spacing={3}>
             {/* Health Summary Cards */}
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -816,7 +793,7 @@ const HealthRecords: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -842,7 +819,7 @@ const HealthRecords: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -866,7 +843,7 @@ const HealthRecords: React.FC = () => {
               </Card>
             </Grid>
 
-            <Grid item xs={12} md={3}>
+            <Grid size={{xs: 12, md: 3}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -895,7 +872,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
 
             {/* Recent Activity */}
-            <Grid item xs={12} md={8}>
+            <Grid size={{xs: 12, md: 8}}>
               <Card elevation={3}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -928,7 +905,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
 
             {/* Health Alerts */}
-            <Grid item xs={12} md={4}>
+            <Grid size={{xs: 12, md: 4}}>
               <Card elevation={3}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -956,7 +933,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
             
             {/* Demo Notification Buttons */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Card elevation={2} sx={{ bgcolor: 'primary.50', border: '1px dashed', borderColor: 'primary.main' }}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, color: 'primary.main' }}>
@@ -1008,7 +985,7 @@ const HealthRecords: React.FC = () => {
         {activeTab === 'vitals' && (
           <Grid container spacing={3}>
             {/* Vital Signs Chart */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Card elevation={3}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -1024,7 +1001,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
 
             {/* Vital Signs Records */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Card elevation={3}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
@@ -1109,7 +1086,7 @@ const HealthRecords: React.FC = () => {
                     </Box>
                     
                     <Grid container spacing={3} sx={{ mb: 2 }}>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{xs: 12, md: 4}}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Result:
                         </Typography>
@@ -1117,7 +1094,7 @@ const HealthRecords: React.FC = () => {
                           {result.value} {result.unit}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{xs: 12, md: 4}}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Reference Range:
                         </Typography>
@@ -1125,7 +1102,7 @@ const HealthRecords: React.FC = () => {
                           {result.referenceRange}
                         </Typography>
                       </Grid>
-                      <Grid item xs={12} md={4}>
+                      <Grid size={{xs: 12, md: 4}}>
                         <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
                           Status:
                         </Typography>
@@ -1194,7 +1171,7 @@ const HealthRecords: React.FC = () => {
                     </Box>
                     
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid size={{xs: 12, sm: 6, md: 3}}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <CalendarIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                           <Typography variant="body2">
@@ -1202,7 +1179,7 @@ const HealthRecords: React.FC = () => {
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid size={{xs: 12, sm: 6, md: 3}}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <TimeIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                           <Typography variant="body2">
@@ -1210,7 +1187,7 @@ const HealthRecords: React.FC = () => {
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid size={{xs: 12, sm: 6, md: 3}}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <LocationIcon sx={{ fontSize: 16, mr: 1, color: 'text.secondary' }} />
                           <Typography variant="body2">
@@ -1218,7 +1195,7 @@ const HealthRecords: React.FC = () => {
                           </Typography>
                         </Box>
                       </Grid>
-                      <Grid item xs={12} sm={6} md={3}>
+                      <Grid size={{xs: 12, sm: 6, md: 3}}>
                         <Chip 
                           label={appointment.type} 
                           size="small" 
@@ -1300,7 +1277,7 @@ const HealthRecords: React.FC = () => {
                       {prescription.medications.map((medication) => (
                         <Paper key={medication.id} variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
                           <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={12} sm={3}>
+                            <Grid size={{xs: 12, sm: 3}}>
                               <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                                 {medication.name}
                               </Typography>
@@ -1308,7 +1285,7 @@ const HealthRecords: React.FC = () => {
                                 {medication.dosage}
                               </Typography>
                             </Grid>
-                            <Grid item xs={12} sm={3}>
+                            <Grid size={{xs: 12, sm: 3}}>
                               <Typography variant="body2" color="text.secondary">
                                 Frequency:
                               </Typography>
@@ -1316,7 +1293,7 @@ const HealthRecords: React.FC = () => {
                                 {medication.frequency}
                               </Typography>
                             </Grid>
-                            <Grid item xs={12} sm={4}>
+                            <Grid size={{xs: 12, sm: 4}}>
                               <Typography variant="body2" color="text.secondary">
                                 Instructions:
                               </Typography>
@@ -1324,7 +1301,7 @@ const HealthRecords: React.FC = () => {
                                 {medication.instructions}
                               </Typography>
                             </Grid>
-                            <Grid item xs={12} sm={2}>
+                            <Grid size={{xs: 12, sm: 2}}>
                               {medication.refillsRemaining !== undefined && (
                                 <Badge badgeContent={medication.refillsRemaining} color="primary">
                                   <Chip label="Refills" size="small" variant="outlined" />
@@ -1403,7 +1380,7 @@ const HealthRecords: React.FC = () => {
               </Box>
               <Grid container spacing={3}>
                 {healthRecord.documents.map((document) => (
-                  <Grid item xs={12} sm={6} md={4} key={document.id}>
+                  <Grid size={{xs: 12, sm: 6, md: 4}} key={document.id}>
                     <Card variant="outlined" sx={{ height: '100%', '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.3s' }}>
                       <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
@@ -1453,7 +1430,7 @@ const HealthRecords: React.FC = () => {
         {activeTab === 'profile' && (
           <Grid container spacing={3}>
             {/* Allergies */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{xs: 12, md: 6}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1481,7 +1458,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
 
             {/* Chronic Conditions */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{xs: 12, md: 6}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1509,7 +1486,7 @@ const HealthRecords: React.FC = () => {
             </Grid>
 
             {/* Emergency Contacts */}
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <Card elevation={3}>
                 <CardContent>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -1522,7 +1499,7 @@ const HealthRecords: React.FC = () => {
                   </Box>
                   <Grid container spacing={3}>
                     {healthRecord.emergencyContacts.map((contact, index) => (
-                      <Grid item xs={12} sm={6} md={4} key={index}>
+                      <Grid size={{xs: 12, sm: 6, md: 4}} key={index}>
                         <Card variant="outlined">
                           <CardContent>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -1588,7 +1565,7 @@ const HealthRecords: React.FC = () => {
                   {selectedPrescription.medications.map((medication) => (
                     <Paper key={medication.id} variant="outlined" sx={{ p: 2 }}>
                       <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{xs: 12, sm: 6}}>
                           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             {medication.name}
                           </Typography>
@@ -1596,7 +1573,7 @@ const HealthRecords: React.FC = () => {
                             {medication.dosage} - {medication.frequency}
                           </Typography>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{xs: 12, sm: 6}}>
                           <Typography variant="body2" sx={{ fontStyle: 'italic' }}>
                             {medication.instructions}
                           </Typography>

@@ -393,5 +393,3 @@ class AppointmentService {
 export const appointmentService = new AppointmentService();
 export default appointmentService;
 
-// Re-export interfaces for convenience
-export type { AvailableSlot, AvailableSlotsResponse };

@@ -7,15 +7,11 @@ import {
   IconButton,
   Avatar,
   Chip,
-  Button,
-  CircularProgress,
-  Container,
-  Divider
+  CircularProgress
 } from '@mui/material';
 import {
   Send as SendIcon,
   SmartToy as BotIcon,
-  Person as UserIcon,
   Favorite as HeartIcon,
   Event as CalendarIcon,
   LocalPharmacy as PillIcon,

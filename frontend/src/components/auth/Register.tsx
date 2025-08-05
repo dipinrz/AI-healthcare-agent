@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Box,
-  Card,
-  CardContent,
   TextField,
   Button,
   Typography,
@@ -27,7 +25,6 @@ import {
   useTheme,
 } from "@mui/material";
 import {
-  Favorite as HeartIcon,
   Email as EmailIcon,
   Lock as LockIcon,
   Person as UserIcon,
@@ -185,7 +182,7 @@ const Register: React.FC = () => {
       case 0:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <TextField
                 fullWidth
                 id="firstName"
@@ -203,7 +200,7 @@ const Register: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <TextField
                 fullWidth
                 id="lastName"
@@ -220,7 +217,7 @@ const Register: React.FC = () => {
       case 1:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 id="email"
@@ -239,7 +236,7 @@ const Register: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 id="phone"
@@ -259,7 +256,7 @@ const Register: React.FC = () => {
                 placeholder="+1 (555) 123-4567"
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <TextField
                 fullWidth
                 id="dateOfBirth"
@@ -274,7 +271,7 @@ const Register: React.FC = () => {
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid size={{xs: 12, sm: 6}}>
               <TextField
                 fullWidth
                 id="gender"
@@ -305,7 +302,7 @@ const Register: React.FC = () => {
       case 2:
         return (
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 id="password"
@@ -335,7 +332,7 @@ const Register: React.FC = () => {
                 helperText="Password must be at least 6 characters long"
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid size={{xs: 12}}>
               <TextField
                 fullWidth
                 id="confirmPassword"

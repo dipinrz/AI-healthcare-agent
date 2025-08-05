@@ -6,9 +6,6 @@ import {
   Typography,
   Button,
   Chip,
-  List,
-  ListItem,
-  ListItemText,
   Avatar,
   Divider,
   IconButton,
@@ -19,8 +16,6 @@ import {
   TextField,
   Grid,
   Alert,
-  Switch,
-  FormControlLabel,
   Stack
 } from '@mui/material';
 // Note: TimePicker requires @mui/x-date-pickers package
@@ -30,7 +25,6 @@ import {
   Schedule as ScheduleIcon,
   Notifications as NotificationsIcon,
   Add as AddIcon,
-  Edit as EditIcon,
   Delete as DeleteIcon,
   PlayArrow as PlayIcon
 } from '@mui/icons-material';
@@ -55,8 +49,7 @@ interface PrescriptionManagerProps {
 }
 
 const PrescriptionManager: React.FC<PrescriptionManagerProps> = ({ 
-  prescriptions,
-  onUpdate 
+  prescriptions
 }) => {
   const [medications, setMedications] = useState<PrescriptionMedication[]>([]);
   const [reminderDialog, setReminderDialog] = useState<{
@@ -201,7 +194,7 @@ const PrescriptionManager: React.FC<PrescriptionManagerProps> = ({
         ) : (
           <Grid container spacing={2}>
             {medications.map((medication) => (
-              <Grid item xs={12} md={6} lg={4} key={medication.id}>
+              <Grid size={{xs: 12, md: 6, lg: 4}} key={medication.id}>
                 <Card elevation={2} sx={{ height: '100%' }}>
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>

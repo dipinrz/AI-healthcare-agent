@@ -174,7 +174,7 @@ const AIChat: React.FC = () => {
               </Typography>
               <Grid container spacing={2}>
                 {quickQuestions.map((question, index) => (
-                  <Grid item xs={12} sm={6} key={index}>
+                  <Grid size={{xs: 12, sm: 6}} key={index}>
                     <Button
                       fullWidth
                       variant="outlined"

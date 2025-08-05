@@ -19,7 +19,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Divider,
   Grid,
   Alert,
   Snackbar
@@ -27,9 +26,7 @@ import {
 import {
   Event as CalendarIcon,
   Schedule as ClockIcon,
-  Person as UserIcon,
   LocationOn as MapPinIcon,
-  Phone as PhoneIcon,
   Add as PlusIcon,
   FilterList as FilterIcon,
   Search as SearchIcon,
@@ -259,7 +256,7 @@ const Appointments: React.FC = () => {
 
         {/* Quick Stats */}
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -279,7 +276,7 @@ const Appointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -299,7 +296,7 @@ const Appointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid item xs={12} md={4}>
+          <Grid size={{xs: 12, md: 4}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -396,15 +393,15 @@ const Appointments: React.FC = () => {
                             size="small"
                           />
                           <Chip
-                            label={appointment.type === 'virtual' ? 'Virtual' : 'In-Person'}
-                            color={appointment.type === 'virtual' ? 'secondary' : 'default'}
+                            label={appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1).replace('_', ' ')}
+                            color="default"
                             size="small"
                             variant="outlined"
                           />
                         </Box>
 
                         <Grid container spacing={3}>
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{xs: 12, md: 6}}>
                             <Typography variant="h6" sx={{ mb: 1 }}>
                               Dr. {appointment.doctor.firstName} {appointment.doctor.lastName}
                             </Typography>
@@ -431,7 +428,7 @@ const Appointments: React.FC = () => {
                             </Box>
                           </Grid>
 
-                          <Grid item xs={12} md={6}>
+                          <Grid size={{xs: 12, md: 6}}>
                             <Box sx={{ mb: 2 }}>
                               <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
                                 Reason:
@@ -486,7 +483,7 @@ const Appointments: React.FC = () => {
                             Cancel
                           </Button>
                         )}
-                        {appointment.type === 'virtual' && appointment.status === 'scheduled' && appointmentService.isUpcoming(appointment.appointmentDate) && (
+                        {appointment.status === 'scheduled' && appointmentService.isUpcoming(appointment.appointmentDate) && (
                           <Button
                             variant="contained"
                             color="success"

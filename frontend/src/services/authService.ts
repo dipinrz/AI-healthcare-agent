@@ -1,4 +1,4 @@
-import { API_CONFIG, API_ENDPOINTS, buildApiUrl } from '../config/api';
+import { API_ENDPOINTS, buildApiUrl } from '../config/api';
 
 export interface User {
   id: string;
