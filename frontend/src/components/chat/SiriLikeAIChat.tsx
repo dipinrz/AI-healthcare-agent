@@ -32,7 +32,10 @@ import {
   Healing as HealingIcon,
 } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
-import chatService from '../../services/chatService';
+// Using Claude agent service for healthcare assistance
+import claudeAgentService from '../../services/claudeAgentService';
+import type { AgentResponse } from '../../services/claudeAgentService';
+import hmsApiClient from '../../services/hmsApiClient';
 
 // Advanced animations
 const breathingAnimation = keyframes`
@@ -105,8 +108,14 @@ interface Message {
   text: string;
   isBot: boolean;
   timestamp: Date;
-  type?: 'text' | 'suggestion' | 'care' | 'diagnostic';
+  type?: 'text' | 'suggestion' | 'care' | 'diagnostic' | 'appointment' | 'prescription' | 'health';
   emotion?: 'supportive' | 'encouraging' | 'empathetic' | 'reassuring';
+  actions?: Array<{
+    type: string;
+    label: string;
+    data: any;
+  }>;
+  agentData?: any;
 }
 
 const SiriLikeAIChat: React.FC = () => {
@@ -124,6 +133,7 @@ const SiriLikeAIChat: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
+  const [isAgentMode] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const quickActions = [
@@ -224,79 +234,48 @@ const SiriLikeAIChat: React.FC = () => {
     setInputValue('');
     setIsLoading(true);
 
-    // Check if this looks like an appointment booking request
-    const lowerText = textToSend.toLowerCase();
-    const isAppointmentRelated = 
-      lowerText.includes('book') || lowerText.includes('appointment') || 
-      lowerText.includes('schedule') || lowerText.includes('doctor') ||
-      lowerText.includes('available') || lowerText.includes('cancel') ||
-      lowerText.includes('reschedule');
-
     try {
-
-      if (isAppointmentRelated) {
-        // Use the chat service for appointment booking
-        const data = await chatService.sendMessage(textToSend);
-        
-        if (data.success) {
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            text: chatService.formatMessageForDisplay(data.data.message),
-            isBot: true,
-            timestamp: new Date(),
-            type: 'care',
-            emotion: 'supportive',
-          };
-          setMessages(prev => [...prev, botMessage]);
-
-          // If appointment was successfully booked, show a success message
-          if (data.data.actions && data.data.actions.some((action: any) => action.type === 'appointment_booked')) {
-            const appointmentDetails = chatService.extractAppointmentDetails(data.data.actions);
-            if (appointmentDetails) {
-              const successMessage: Message = {
-                id: (Date.now() + 2).toString(),
-                text: `🎉 Great news! Your appointment has been confirmed:\n\n📅 Date: ${appointmentDetails.date}\n⏰ Time: ${appointmentDetails.time}\n👨‍⚕️ Doctor: ${appointmentDetails.doctor}\n📋 Type: ${appointmentDetails.type}\n\nYou'll receive a confirmation email shortly. Is there anything else I can help you with?`,
-                isBot: true,
-                timestamp: new Date(),
-                type: 'care',
-                emotion: 'encouraging',
-              };
-              setTimeout(() => {
-                setMessages(prev => [...prev, successMessage]);
-              }, 1000);
-            }
-          }
-        } else {
-          throw new Error(data.message || 'Failed to get response');
-        }
+      let agentResponse: AgentResponse;
+      
+      if (isAgentMode) {
+        // Use Claude Agent Service for comprehensive healthcare assistance
+        agentResponse = await claudeAgentService.processMessage(textToSend);
       } else {
-        // Use empathetic responses for general health queries
-        setTimeout(() => {
-          const response = getEmpatheticResponse(textToSend, emotion);
-          
-          const botMessage: Message = {
-            id: (Date.now() + 1).toString(),
-            text: response,
-            isBot: true,
-            timestamp: new Date(),
-            type: 'care',
-            emotion: emotion as any,
-          };
-          setMessages(prev => [...prev, botMessage]);
-        }, 1500);
+        // Fallback to empathetic responses for general queries
+        const response = getEmpatheticResponse(textToSend, emotion);
+        agentResponse = {
+          success: true,
+          message: response,
+          type: 'general'
+        };
       }
+      
+      const botMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: agentResponse.message,
+        isBot: true,
+        timestamp: new Date(),
+        type: agentResponse.type as any,
+        emotion: agentResponse.success ? 'supportive' : 'empathetic',
+        actions: agentResponse.actions,
+        agentData: agentResponse.data
+      };
+      
+      setMessages(prev => [...prev, botMessage]);
+      
     } catch (error: any) {
-      console.error('Chat error:', error);
+      console.error('Claude Agent error:', error);
       
-      let errorMessage = "I apologize, but I'm having trouble connecting to my appointment system right now. Please try again in a moment. 💙";
+      let errorMessage = "I apologize, but I'm experiencing some technical difficulties right now. Let me try to help you anyway! 💙";
       
-      // Provide more specific error messages
+      // Provide specific error guidance
       if (error.message.includes('authentication') || error.message.includes('token')) {
-        errorMessage = "It looks like your session has expired. Please refresh the page and log in again to continue booking appointments. 🔐";
+        errorMessage = "It looks like your session has expired. Please refresh the page and log in again to access all healthcare features. 🔐";
       } else if (error.message.includes('network') || error.message.includes('connection')) {
-        errorMessage = "I'm having trouble connecting to the server. Please check your internet connection and try again. 🌐";
-      } else if (isAppointmentRelated) {
-        errorMessage = "I'm temporarily unable to access the appointment system. You can try again in a moment, or contact our support team for immediate assistance. In the meantime, I'm here for general health guidance! 💙";
+        errorMessage = "I'm having trouble connecting to our healthcare systems. Please check your internet connection and try again. 🌐";
+      } else {
+        // Try fallback empathetic response
+        errorMessage = getEmpatheticResponse(textToSend, emotion);
       }
       
       const fallbackMessage: Message = {
@@ -315,6 +294,155 @@ const SiriLikeAIChat: React.FC = () => {
 
   const handleQuickAction = (action: any) => {
     handleSendMessage(action.text, action.emotion);
+  };
+
+  const handleMessageAction = async (action: any) => {
+    setIsLoading(true);
+    
+    try {
+      // Handle different action types
+      switch (action.type) {
+        case 'book_slot':
+          // Actually book the appointment through API
+          try {
+            const bookingData = {
+              doctorId: action.data.doctorId,
+              appointmentDate: action.data.slot.datetime || action.data.slot.time,
+              reason: 'General consultation',
+              type: 'consultation'
+            };
+            
+            const bookingResult = await hmsApiClient.bookAppointment(bookingData);
+            
+            if (bookingResult.success) {
+              const successMessage = {
+                id: (Date.now() + 1).toString(),
+                text: `✅ **Appointment Booked Successfully!**\n\n📅 **Your Appointment Details:**\n• **Doctor:** ${action.data.doctorName}\n• **Date & Time:** ${action.data.slot.displayTime || action.data.slot.time}\n• **Status:** Confirmed\n\n🎉 **Great news!** Your appointment has been scheduled successfully. You'll receive a confirmation email shortly.\n\n**What's Next:**\n• Add to your calendar\n• Prepare any questions for your doctor\n• Arrive 15 minutes early\n\nIs there anything else I can help you with? 💙`,
+                isBot: true,
+                timestamp: new Date(),
+                type: 'appointment' as any,
+                emotion: 'supportive' as any,
+                actions: [
+                  { type: 'view_appointments', label: 'View My Appointments', data: {} },
+                  { type: 'book_another', label: 'Book Another Appointment', data: {} }
+                ],
+                agentData: { appointment: bookingResult.data }
+              };
+              setMessages(prev => [...prev, successMessage]);
+            } else {
+              throw new Error(bookingResult.message || 'Booking failed');
+            }
+          } catch (error: any) {
+            const errorMessage = {
+              id: (Date.now() + 1).toString(),
+              text: `❌ **Booking Failed**\n\nI'm sorry, but I couldn't complete your appointment booking. ${error.message}\n\nPlease try again or contact our office directly for assistance. 📞`,
+              isBot: true,
+              timestamp: new Date(),
+              type: 'appointment' as any,
+              emotion: 'empathetic' as any,
+              actions: [
+                { type: 'retry_booking', label: 'Try Again', data: action.data },
+                { type: 'contact_office', label: 'Contact Office', data: {} }
+              ]
+            };
+            setMessages(prev => [...prev, errorMessage]);
+          }
+          break;
+        
+        case 'select_doctor':
+          // Get available slots for selected doctor
+          try {
+            // Default to tomorrow if no date specified
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const targetDate = tomorrow.toISOString().split('T')[0];
+            
+            console.log('🔍 Getting slots for doctor:', action.data.doctorId, 'on date:', targetDate);
+            const slotsResponse = await hmsApiClient.getDoctorAvailability(action.data.doctorId, targetDate);
+            if (slotsResponse.success && slotsResponse.data?.length > 0) {
+              const slotActions = slotsResponse.data.slice(0, 8).map((slot: any) => ({
+                type: 'book_slot',
+                label: slot.displayTime || slot.time,
+                data: { 
+                  doctorId: action.data.doctorId,
+                  doctorName: action.data.doctorName,
+                  slot: slot
+                }
+              }));
+
+              const availabilityMessage = {
+                id: (Date.now() + 1).toString(),
+                text: `📅 **Available Times for ${action.data.doctorName}**\n\nI found ${slotsResponse.data.length} available appointment slots. Please select your preferred time:\n\n**Available Appointments:**`,
+                isBot: true,
+                timestamp: new Date(),
+                type: 'appointment' as any,
+                emotion: 'supportive' as any,
+                actions: slotActions,
+                agentData: { 
+                  doctor: action.data,
+                  availableSlots: slotsResponse.data 
+                }
+              };
+              setMessages(prev => [...prev, availabilityMessage]);
+            } else {
+              throw new Error('No available slots found');
+            }
+          } catch (error) {
+            await claudeAgentService.processMessage(
+              `I want to book with ${action.data.doctorName}`
+            );
+          }
+          break;
+        
+        case 'cancel_appointment':
+          const cancellationResult = await claudeAgentService.cancelAppointment(action.data.appointmentId);
+          const cancelMessage = {
+            id: (Date.now() + 1).toString(),
+            text: cancellationResult.message,
+            isBot: true,
+            timestamp: new Date(),
+            type: cancellationResult.type as any,
+            emotion: cancellationResult.success ? 'supportive' : 'empathetic',
+            actions: cancellationResult.actions,
+            agentData: cancellationResult.data
+          };
+          setMessages(prev => [...prev, cancelMessage]);
+          break;
+        
+        case 'reschedule_appointment':
+          const rescheduleResult = await claudeAgentService.rescheduleAppointment(action.data.appointmentId);
+          const rescheduleMessage = {
+            id: (Date.now() + 1).toString(),
+            text: rescheduleResult.message,
+            isBot: true,
+            timestamp: new Date(),
+            type: rescheduleResult.type as any,
+            emotion: rescheduleResult.success ? 'supportive' : 'empathetic',
+            actions: rescheduleResult.actions,
+            agentData: rescheduleResult.data
+          };
+          setMessages(prev => [...prev, rescheduleMessage]);
+          break;
+        
+        case 'medication_details':
+          await claudeAgentService.processMessage(
+            `Tell me more about medication ID ${action.data.medicationId}`
+          );
+          break;
+        
+        case 'refresh_page':
+          window.location.reload();
+          break;
+        
+        default:
+          // Generic action handling
+          await claudeAgentService.processMessage(action.label);
+      }
+    } catch (error) {
+      console.error('Action handling error:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getActionColor = (colorName: string) => {
@@ -722,6 +850,37 @@ const SiriLikeAIChat: React.FC = () => {
                         minute: '2-digit',
                       })}
                     </Typography>
+                    
+                    {/* Action Buttons */}
+                    {message.actions && message.actions.length > 0 && (
+                      <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                        {message.actions.map((action, actionIndex) => (
+                          <Button
+                            key={actionIndex}
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleMessageAction(action)}
+                            disabled={isLoading}
+                            sx={{
+                              minWidth: 'auto',
+                              px: 2,
+                              py: 0.5,
+                              fontSize: '0.75rem',
+                              borderRadius: 2,
+                              textTransform: 'none',
+                              border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
+                              color: theme.palette.primary.main,
+                              '&:hover': {
+                                background: alpha(theme.palette.primary.main, 0.1),
+                                border: `1px solid ${theme.palette.primary.main}`,
+                              },
+                            }}
+                          >
+                            {action.label}
+                          </Button>
+                        ))}
+                      </Box>
+                    )}
                   </Paper>
 
                   {!message.isBot && (
