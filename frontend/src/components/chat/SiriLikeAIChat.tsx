@@ -309,7 +309,7 @@ const SiriLikeAIChat: React.FC = () => {
               doctorId: action.data.doctorId,
               appointmentDate: action.data.slot.datetime || action.data.slot.time,
               reason: 'General consultation',
-              type: 'consultation'
+              type: 'consultation' as const
             };
             
             const bookingResult = await hmsApiClient.bookAppointment(bookingData);
@@ -320,8 +320,8 @@ const SiriLikeAIChat: React.FC = () => {
                 text: `✅ **Appointment Booked Successfully!**\n\n📅 **Your Appointment Details:**\n• **Doctor:** ${action.data.doctorName}\n• **Date & Time:** ${action.data.slot.displayTime || action.data.slot.time}\n• **Status:** Confirmed\n\n🎉 **Great news!** Your appointment has been scheduled successfully. You'll receive a confirmation email shortly.\n\n**What's Next:**\n• Add to your calendar\n• Prepare any questions for your doctor\n• Arrive 15 minutes early\n\nIs there anything else I can help you with? 💙`,
                 isBot: true,
                 timestamp: new Date(),
-                type: 'appointment' as any,
-                emotion: 'supportive' as any,
+                type: 'appointment' as const,
+                emotion: 'supportive' as const,
                 actions: [
                   { type: 'view_appointments', label: 'View My Appointments', data: {} },
                   { type: 'book_another', label: 'Book Another Appointment', data: {} }
@@ -338,8 +338,8 @@ const SiriLikeAIChat: React.FC = () => {
               text: `❌ **Booking Failed**\n\nI'm sorry, but I couldn't complete your appointment booking. ${error.message}\n\nPlease try again or contact our office directly for assistance. 📞`,
               isBot: true,
               timestamp: new Date(),
-              type: 'appointment' as any,
-              emotion: 'empathetic' as any,
+              type: 'appointment' as const,
+              emotion: 'empathetic' as const,
               actions: [
                 { type: 'retry_booking', label: 'Try Again', data: action.data },
                 { type: 'contact_office', label: 'Contact Office', data: {} }
@@ -359,7 +359,7 @@ const SiriLikeAIChat: React.FC = () => {
             
             console.log('🔍 Getting slots for doctor:', action.data.doctorId, 'on date:', targetDate);
             const slotsResponse = await hmsApiClient.getDoctorAvailability(action.data.doctorId, targetDate);
-            if (slotsResponse.success && slotsResponse.data?.length > 0) {
+            if (slotsResponse.success && slotsResponse.data && slotsResponse.data.length > 0) {
               const slotActions = slotsResponse.data.slice(0, 8).map((slot: any) => ({
                 type: 'book_slot',
                 label: slot.displayTime || slot.time,
@@ -372,11 +372,11 @@ const SiriLikeAIChat: React.FC = () => {
 
               const availabilityMessage = {
                 id: (Date.now() + 1).toString(),
-                text: `📅 **Available Times for ${action.data.doctorName}**\n\nI found ${slotsResponse.data.length} available appointment slots. Please select your preferred time:\n\n**Available Appointments:**`,
+                text: `📅 **Available Times for ${action.data.doctorName}**\n\nI found ${slotsResponse.data?.length || 0} available appointment slots. Please select your preferred time:\n\n**Available Appointments:**`,
                 isBot: true,
                 timestamp: new Date(),
-                type: 'appointment' as any,
-                emotion: 'supportive' as any,
+                type: 'appointment' as const,
+                emotion: 'supportive' as const,
                 actions: slotActions,
                 agentData: { 
                   doctor: action.data,
@@ -396,7 +396,7 @@ const SiriLikeAIChat: React.FC = () => {
         
         case 'cancel_appointment':
           const cancellationResult = await claudeAgentService.cancelAppointment(action.data.appointmentId);
-          const cancelMessage = {
+          const cancelMessage: Message = {
             id: (Date.now() + 1).toString(),
             text: cancellationResult.message,
             isBot: true,
@@ -411,7 +411,7 @@ const SiriLikeAIChat: React.FC = () => {
         
         case 'reschedule_appointment':
           const rescheduleResult = await claudeAgentService.rescheduleAppointment(action.data.appointmentId);
-          const rescheduleMessage = {
+          const rescheduleMessage: Message = {
             id: (Date.now() + 1).toString(),
             text: rescheduleResult.message,
             isBot: true,

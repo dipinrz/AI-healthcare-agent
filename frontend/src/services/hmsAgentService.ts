@@ -1,8 +1,6 @@
 // HMS Agent Integration Service for SiriLikeAIChat
-import chatService from './chatService';
-import type { ChatResponse } from './chatService';
 import hmsApiClient from './hmsApiClient';
-import type { ApiResponse, Doctor, Appointment, Prescription } from './hmsApiClient';
+import chatService from './chatService';
 
 export interface AgentResponse {
   success: boolean;
@@ -177,7 +175,7 @@ class HMSAgentService {
     if (!selectedDoctor) {
       return {
         success: true,
-        message: `I found ${doctors.length} available doctors for you:\n\n${doctors.slice(0, 3).map((d, _i) => 
+        message: `I found ${doctors.length} available doctors for you:\n\n${doctors.slice(0, 3).map((d, i) => 
           `${i + 1}. Dr. ${d.firstName} ${d.lastName} - ${d.specialization}\n   📍 ${d.department} | 🎓 ${d.experience} years experience`
         ).join('\n\n')}\n\nWhich doctor would you prefer? Just tell me the number or name! 👨‍⚕️`,
         type: 'appointment',
@@ -254,7 +252,7 @@ class HMSAgentService {
       ).join('\n')}\n\nWhich time works best for you? 🕐`,
       type: 'appointment',
       data: { doctorId: selectedDoctor.id, doctorName: `${selectedDoctor.firstName} ${selectedDoctor.lastName}`, availableSlots },
-      actions: availableSlots.map((slot, i) => ({
+      actions: availableSlots.map((slot, _i) => ({
         type: 'book_slot',
         label: slot.displayTime,
         data: { doctorId: selectedDoctor.id, slot, appointmentRequest }
@@ -305,7 +303,7 @@ class HMSAgentService {
   }
 
   // Handle availability checking
-  private async handleAvailabilityCheck(message: string): Promise<AgentResponse> {
+  private async handleAvailabilityCheck(_message: string): Promise<AgentResponse> {
     try {
       const doctorsResult = await hmsApiClient.getDoctors();
       
@@ -389,7 +387,7 @@ class HMSAgentService {
 
       return {
         success: true,
-        message: `Here are your current prescriptions:\n\n${activePrescriptions.map((p, i) => 
+        message: `Here are your current prescriptions:\n\n${activePrescriptions.map((p, _i) => 
           `💊 ${p.medication.name} (${p.medication.brandName})\n   📋 ${p.dosage} - ${p.frequency}\n   📅 ${p.refills} refills remaining\n   🏥 Prescribed: ${new Date(p.startDate).toLocaleDateString()}\n`
         ).join('\n')}\nIs there anything specific you'd like to know about your medications? 🤔`,
         type: 'prescription',
@@ -410,7 +408,7 @@ class HMSAgentService {
   }
 
   // Handle health record requests
-  private async handleHealthRecordRequest(message: string): Promise<AgentResponse> {
+  private async handleHealthRecordRequest(_message: string): Promise<AgentResponse> {
     try {
       const healthRecordResult = await hmsApiClient.getPatientHistory();
       
@@ -422,7 +420,7 @@ class HMSAgentService {
         };
       }
 
-      const _healthRecord = healthRecordResult.data;
+      healthRecordResult.data;
       const summary = await hmsApiClient.getPatientSummary();
 
       if (summary.success && summary.data) {
@@ -455,7 +453,7 @@ class HMSAgentService {
   }
 
   // Handle system info requests
-  private async handleSystemInfoRequest(message: string): Promise<AgentResponse> {
+  private async handleSystemInfoRequest(_message: string): Promise<AgentResponse> {
     try {
       const systemStatus = await hmsApiClient.getSystemStatus();
       
@@ -750,7 +748,7 @@ class HMSAgentService {
     }
   }
 
-  private async handleAppointmentCancellation(message: string): Promise<AgentResponse> {
+  private async handleAppointmentCancellation(_message: string): Promise<AgentResponse> {
     try {
       const appointmentsResult = await hmsApiClient.getAppointments();
       
