@@ -4,6 +4,7 @@ import { Prescription } from './Prescription';
 import { VitalSigns } from './VitalSigns';
 import { LabResult } from './LabResult';
 import { MedicalDocument } from './MedicalDocument';
+import { DoctorAvailability } from './DoctorAvailability';
 
 @Entity()
 export class Doctor {
@@ -72,4 +73,7 @@ export class Doctor {
 
   @OneToMany(() => MedicalDocument, document => document.createdBy)
   medicalDocuments: MedicalDocument[];
+
+  @OneToMany(() => DoctorAvailability, availability => availability.doctor)
+  availabilitySlots: DoctorAvailability[];
 }

@@ -4,6 +4,7 @@ import { Appointment, AppointmentStatus, AppointmentType } from '../entities/App
 import { Patient } from '../entities/Patient';
 import { Doctor } from '../entities/Doctor';
 import { User } from '../entities/User';
+import { DoctorAvailability } from '../entities/DoctorAvailability';
 import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
@@ -11,6 +12,7 @@ const appointmentRepository = AppDataSource.getRepository(Appointment);
 const patientRepository = AppDataSource.getRepository(Patient);
 const doctorRepository = AppDataSource.getRepository(Doctor);
 const userRepository = AppDataSource.getRepository(User);
+const availabilityRepository = AppDataSource.getRepository(DoctorAvailability);
 
 router.use(authenticateToken);
 
@@ -109,6 +111,7 @@ router.post('/', async (req: Request, res: Response) => {
     const {
       doctorId,
       appointmentDate,
+      slotId,
       duration = 30,
       type = AppointmentType.CONSULTATION,
       reason,
@@ -162,21 +165,61 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // Check for conflicts
-    const conflictingAppointment = await appointmentRepository.findOne({
-      where: {
-        doctor: { id: doctorId },
-        appointmentDate: appointmentDateTime,
-        status: AppointmentStatus.SCHEDULED
-      }
-    });
-
-    if (conflictingAppointment) {
-      return res.status(409).json({
-        success: false,
-        message: 'Doctor is not available at this time'
+    // Check availability using the new slot system
+    let availabilitySlot = null;
+    
+    if (slotId) {
+      // If slotId is provided, check that specific slot
+      availabilitySlot = await availabilityRepository.findOne({
+        where: { 
+          slotId: parseInt(slotId),
+          doctor: { id: doctorId }
+        },
+        relations: ['doctor']
       });
+
+      if (!availabilitySlot) {
+        return res.status(404).json({
+          success: false,
+          message: 'Availability slot not found'
+        });
+      }
+
+      if (availabilitySlot.isBooked) {
+        return res.status(409).json({
+          success: false,
+          message: 'This time slot is already booked'
+        });
+      }
+
+      if (availabilitySlot.startTime.getTime() !== appointmentDateTime.getTime()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Appointment date does not match the selected slot'
+        });
+      }
+    } else {
+      // If no slotId provided, find available slot for the requested time
+      availabilitySlot = await availabilityRepository.findOne({
+        where: {
+          doctor: { id: doctorId },
+          startTime: appointmentDateTime,
+          isBooked: false
+        },
+        relations: ['doctor']
+      });
+
+      if (!availabilitySlot) {
+        return res.status(409).json({
+          success: false,
+          message: 'Doctor is not available at this time'
+        });
+      }
     }
+
+    // Mark the slot as booked
+    availabilitySlot.isBooked = true;
+    await availabilityRepository.save(availabilitySlot);
 
     const appointment = appointmentRepository.create({
       patient,
@@ -207,6 +250,7 @@ router.post('/', async (req: Request, res: Response) => {
         type: savedAppointment!.type,
         reason: savedAppointment!.reason,
         symptoms: savedAppointment!.symptoms,
+        slotId: availabilitySlot.slotId,
         patient: {
           id: savedAppointment!.patient.id,
           firstName: savedAppointment!.patient.firstName,

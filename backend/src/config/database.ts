@@ -46,6 +46,7 @@ import { Prescription } from '../entities/Prescription';
 import { VitalSigns } from '../entities/VitalSigns';
 import { LabResult } from '../entities/LabResult';
 import { MedicalDocument } from '../entities/MedicalDocument';
+import { DoctorAvailability } from '../entities/DoctorAvailability';
 
 // Database configuration based on environment
 const isProduction = process.env.NODE_ENV === 'production';
@@ -54,8 +55,8 @@ const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_O
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: databaseUrl,
-  synchronize: !isProduction, // Only use in development, disable in production
-  logging: !isProduction, // Disable logging in production for performance
+  synchronize: true, // Only use in development, disable in production
+  logging:false, // Disable logging in production for performance
   ssl: databaseUrl.includes('neon.tech') || databaseUrl.includes('amazonaws.com'), // SSL for cloud providers
   entities: [
     User,
@@ -68,6 +69,7 @@ export const AppDataSource = new DataSource({
     VitalSigns,
     LabResult,
     MedicalDocument,
+    DoctorAvailability
   ],
   migrations: [],
   subscribers: [],

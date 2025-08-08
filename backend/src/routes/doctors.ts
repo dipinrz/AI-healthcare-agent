@@ -74,6 +74,48 @@ router.get('/', async (req: Request, res: Response) => {
   }
 });
 
+// Search doctors by name
+router.get('/search/by-name', async (req: Request, res: Response) => {
+  try {
+    const { name } = req.query;
+
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name parameter is required'
+      });
+    }
+
+    // Fuzzy search using ILIKE for case-insensitive partial matching
+    const doctors = await doctorRepository
+      .createQueryBuilder('doctor')
+      .where(
+        '(doctor.firstName ILIKE :name OR doctor.lastName ILIKE :name OR CONCAT(doctor.firstName, \' \', doctor.lastName) ILIKE :name)',
+        { name: `%${name}%` }
+      )
+      .orderBy('doctor.rating', 'DESC')
+      .addOrderBy('doctor.firstName', 'ASC')
+      .getMany();
+
+    const formattedResults = doctors.map(doctor => ({
+      doctor_id: doctor.id,
+      doctor_name: `Dr. ${doctor.firstName} ${doctor.lastName}`,
+      department: doctor.department
+    }));
+
+    res.json({
+      success: true,
+      data: formattedResults
+    });
+  } catch (error) {
+    console.error('Search doctors by name error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to search doctors'
+    });
+  }
+});
+
 // Get doctor by ID
 router.get('/:id', async (req: Request, res: Response) => {
   try {
