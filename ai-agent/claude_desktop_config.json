@@ -1,9 +1,0 @@
-{
-  "mcpServers": {
-    "appointment-booking": {
-      "command": "python",
-      "args": ["/home/reizend/Documents/ai-healthcare-new/ai-agent/appointment_mcp_server.py"],
-      "env": {}
-    }
-  }
-}
