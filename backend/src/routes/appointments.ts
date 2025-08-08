@@ -325,22 +325,41 @@ router.put('/:id/reschedule', async (req: Request, res: Response) => {
       });
     }
 
-    // Check for conflicts
-    const conflictingAppointment = await appointmentRepository.findOne({
+    // Find the old slot and release it
+    const oldSlot = await availabilityRepository.findOne({
       where: {
         doctor: { id: appointment.doctor.id },
-        appointmentDate: newDate,
-        status: AppointmentStatus.SCHEDULED
+        startTime: appointment.appointmentDate,
+        isBooked: true
       }
     });
 
-    if (conflictingAppointment && conflictingAppointment.id !== appointment.id) {
+    if (oldSlot) {
+      oldSlot.isBooked = false;
+      await availabilityRepository.save(oldSlot);
+    }
+
+    // Find and book the new slot
+    const newSlot = await availabilityRepository.findOne({
+      where: {
+        doctor: { id: appointment.doctor.id },
+        startTime: newDate,
+        isBooked: false
+      }
+    });
+
+    if (!newSlot) {
       return res.status(409).json({
         success: false,
-        message: 'Doctor is not available at this time'
+        message: 'Doctor is not available at this time - no available slot'
       });
     }
 
+    // Book the new slot
+    newSlot.isBooked = true;
+    await availabilityRepository.save(newSlot);
+
+    // Update appointment
     appointment.appointmentDate = newDate;
     await appointmentRepository.save(appointment);
 
@@ -407,6 +426,20 @@ router.put('/:id/cancel', async (req: Request, res: Response) => {
         success: false,
         message: 'Cannot cancel completed appointments'
       });
+    }
+
+    // Find and release the booked slot
+    const bookedSlot = await availabilityRepository.findOne({
+      where: {
+        doctor: { id: appointment.doctor.id },
+        startTime: appointment.appointmentDate,
+        isBooked: true
+      }
+    });
+
+    if (bookedSlot) {
+      bookedSlot.isBooked = false;
+      await availabilityRepository.save(bookedSlot);
     }
 
     appointment.status = AppointmentStatus.CANCELLED;
@@ -608,6 +641,234 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: 'Failed to complete appointment'
+    });
+  }
+});
+
+// Reschedule appointment using patient ID and new slot ID
+router.put('/patient/:patientId/appointment/:appointmentId/reschedule', async (req: Request, res: Response) => {
+  try {
+    const { patientId, appointmentId } = req.params;
+    const { newSlotId } = req.body;
+
+    if (!newSlotId) {
+      return res.status(400).json({
+        success: false,
+        message: 'New slot ID is required'
+      });
+    }
+
+    // Verify patient exists
+    const patient = await patientRepository.findOne({
+      where: { id: patientId }
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
+
+    // Get the appointment
+    const appointment = await appointmentRepository.findOne({
+      where: { 
+        id: appointmentId,
+        patient: { id: patientId }
+      },
+      relations: ['patient', 'doctor']
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found for this patient'
+      });
+    }
+
+    if (appointment.status !== AppointmentStatus.SCHEDULED) {
+      return res.status(400).json({
+        success: false,
+        message: 'Can only reschedule scheduled appointments'
+      });
+    }
+
+    // Get the new slot
+    const newSlot = await availabilityRepository.findOne({
+      where: { slotId: parseInt(newSlotId) },
+      relations: ['doctor']
+    });
+
+    if (!newSlot) {
+      return res.status(404).json({
+        success: false,
+        message: 'New slot not found'
+      });
+    }
+
+    if (newSlot.isBooked) {
+      return res.status(409).json({
+        success: false,
+        message: 'New slot is already booked'
+      });
+    }
+
+    if (newSlot.startTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot reschedule to past slots'
+      });
+    }
+
+    // Must be same doctor
+    if (newSlot.doctor.id !== appointment.doctor.id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot reschedule to a different doctor'
+      });
+    }
+
+    // Release old slot
+    const oldSlot = await availabilityRepository.findOne({
+      where: {
+        doctor: { id: appointment.doctor.id },
+        startTime: appointment.appointmentDate,
+        isBooked: true
+      }
+    });
+
+    if (oldSlot) {
+      oldSlot.isBooked = false;
+      await availabilityRepository.save(oldSlot);
+    }
+
+    // Book new slot
+    newSlot.isBooked = true;
+    await availabilityRepository.save(newSlot);
+
+    // Update appointment
+    appointment.appointmentDate = newSlot.startTime;
+    await appointmentRepository.save(appointment);
+
+    res.json({
+      success: true,
+      message: 'Appointment rescheduled successfully',
+      data: {
+        appointmentId: appointment.id,
+        oldSlotId: oldSlot?.slotId || null,
+        newSlotId: newSlot.slotId,
+        newAppointmentDate: appointment.appointmentDate,
+        patient: {
+          id: appointment.patient.id,
+          name: `${appointment.patient.firstName} ${appointment.patient.lastName}`
+        },
+        doctor: {
+          id: appointment.doctor.id,
+          name: `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Reschedule appointment with patient ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reschedule appointment'
+    });
+  }
+});
+
+// Cancel appointment using patient ID
+router.put('/patient/:patientId/appointment/:appointmentId/cancel', async (req: Request, res: Response) => {
+  try {
+    const { patientId, appointmentId } = req.params;
+    const { reason } = req.body; // Optional cancellation reason
+
+    // Verify patient exists
+    const patient = await patientRepository.findOne({
+      where: { id: patientId }
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
+
+    // Get the appointment
+    const appointment = await appointmentRepository.findOne({
+      where: { 
+        id: appointmentId,
+        patient: { id: patientId }
+      },
+      relations: ['patient', 'doctor']
+    });
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found for this patient'
+      });
+    }
+
+    if (appointment.status === AppointmentStatus.CANCELLED) {
+      return res.status(400).json({
+        success: false,
+        message: 'Appointment is already cancelled'
+      });
+    }
+
+    if (appointment.status === AppointmentStatus.COMPLETED) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel completed appointments'
+      });
+    }
+
+    // Find and release the booked slot
+    const bookedSlot = await availabilityRepository.findOne({
+      where: {
+        doctor: { id: appointment.doctor.id },
+        startTime: appointment.appointmentDate,
+        isBooked: true
+      }
+    });
+
+    if (bookedSlot) {
+      bookedSlot.isBooked = false;
+      await availabilityRepository.save(bookedSlot);
+    }
+
+    // Update appointment
+    appointment.status = AppointmentStatus.CANCELLED;
+    if (reason) {
+      appointment.notes = (appointment.notes || '') + `\nCancellation reason: ${reason}`;
+    }
+    await appointmentRepository.save(appointment);
+
+    res.json({
+      success: true,
+      message: 'Appointment cancelled successfully',
+      data: {
+        appointmentId: appointment.id,
+        releasedSlotId: bookedSlot?.slotId || null,
+        cancelledDate: new Date(),
+        reason: reason || 'No reason provided',
+        patient: {
+          id: appointment.patient.id,
+          name: `${appointment.patient.firstName} ${appointment.patient.lastName}`
+        },
+        doctor: {
+          id: appointment.doctor.id,
+          name: `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Cancel appointment with patient ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel appointment'
     });
   }
 });
