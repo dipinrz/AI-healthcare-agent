@@ -612,4 +612,144 @@ router.put('/:id/complete', async (req: Request, res: Response) => {
   }
 });
 
+// Book appointment using patient ID and slot ID
+router.post('/book-slot', async (req: Request, res: Response) => {
+  try {
+    const {
+      patientId,
+      slotId,
+      reason,
+      symptoms,
+      type = AppointmentType.CONSULTATION
+    } = req.body;
+
+    if (!patientId || !slotId || !reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient ID, slot ID, and reason are required'
+      });
+    }
+
+    // Verify patient exists
+    const patient = await patientRepository.findOne({
+      where: { id: patientId }
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
+
+    // Get the availability slot
+    const availabilitySlot = await availabilityRepository.findOne({
+      where: { slotId: parseInt(slotId) },
+      relations: ['doctor']
+    });
+
+    if (!availabilitySlot) {
+      return res.status(404).json({
+        success: false,
+        message: 'Availability slot not found'
+      });
+    }
+
+    if (availabilitySlot.isBooked) {
+      return res.status(409).json({
+        success: false,
+        message: 'This time slot is already booked'
+      });
+    }
+
+    // Check if the slot time is in the future
+    if (availabilitySlot.startTime <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot book slots in the past'
+      });
+    }
+
+    // Check for existing appointment conflicts for this patient
+    const existingAppointment = await appointmentRepository.findOne({
+      where: {
+        patient: { id: patientId },
+        appointmentDate: availabilitySlot.startTime,
+        status: AppointmentStatus.SCHEDULED
+      }
+    });
+
+    if (existingAppointment) {
+      return res.status(409).json({
+        success: false,
+        message: 'Patient already has an appointment at this time'
+      });
+    }
+
+    // Mark the slot as booked
+    availabilitySlot.isBooked = true;
+    await availabilityRepository.save(availabilitySlot);
+
+    // Create the appointment
+    const appointment = appointmentRepository.create({
+      patient,
+      doctor: availabilitySlot.doctor,
+      appointmentDate: availabilitySlot.startTime,
+      duration: 30, // Default 30 minutes
+      type,
+      reason,
+      symptoms: symptoms || '',
+      status: AppointmentStatus.SCHEDULED
+    });
+
+    await appointmentRepository.save(appointment);
+
+    const savedAppointment = await appointmentRepository.findOne({
+      where: { id: appointment.id },
+      relations: ['patient', 'doctor']
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Appointment booked successfully using slot',
+      data: {
+        appointmentId: savedAppointment!.id,
+        slotId: availabilitySlot.slotId,
+        appointmentDate: savedAppointment!.appointmentDate,
+        duration: savedAppointment!.duration,
+        status: savedAppointment!.status,
+        type: savedAppointment!.type,
+        reason: savedAppointment!.reason,
+        symptoms: savedAppointment!.symptoms,
+        patient: {
+          id: savedAppointment!.patient.id,
+          name: `${savedAppointment!.patient.firstName} ${savedAppointment!.patient.lastName}`,
+          phone: savedAppointment!.patient.phone,
+          email: savedAppointment!.patient.email
+        },
+        doctor: {
+          id: savedAppointment!.doctor.id,
+          name: `Dr. ${savedAppointment!.doctor.firstName} ${savedAppointment!.doctor.lastName}`,
+          specialization: savedAppointment!.doctor.specialization,
+          qualification: savedAppointment!.doctor.qualification,
+          department: savedAppointment!.doctor.department,
+          phone: savedAppointment!.doctor.phone
+        },
+        slot: {
+          slotId: availabilitySlot.slotId,
+          startTime: availabilitySlot.startTime.toISOString().replace('T', ' ').substring(0, 16),
+          endTime: availabilitySlot.endTime.toISOString().replace('T', ' ').substring(0, 16),
+          isBooked: availabilitySlot.isBooked
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Book appointment with slot error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to book appointment'
+    });
+  }
+});
+
 export default router;

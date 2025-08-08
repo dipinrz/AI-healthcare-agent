@@ -38,6 +38,8 @@ const appointments_1 = __importDefault(require("./routes/appointments"));
 const medications_1 = __importDefault(require("./routes/medications"));
 const chat_1 = __importDefault(require("./routes/chat"));
 const healthRecords_1 = __importDefault(require("./routes/healthRecords"));
+const doctorAvailability_1 = __importDefault(require("./routes/doctorAvailability"));
+const seed_1 = __importDefault(require("./routes/seed"));
 app.use('/api/auth', auth_1.default);
 app.use('/api/patients', patients_1.default);
 app.use('/api/doctors', doctors_1.default);
@@ -45,6 +47,8 @@ app.use('/api/appointments', appointments_1.default);
 app.use('/api/medications', medications_1.default);
 app.use('/api/chat', chat_1.default);
 app.use('/api/health-records', healthRecords_1.default);
+app.use('/api/availability', doctorAvailability_1.default);
+app.use('/api/seed', seed_1.default);
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);

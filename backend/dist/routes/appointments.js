@@ -6,12 +6,14 @@ const Appointment_1 = require("../entities/Appointment");
 const Patient_1 = require("../entities/Patient");
 const Doctor_1 = require("../entities/Doctor");
 const User_1 = require("../entities/User");
+const DoctorAvailability_1 = require("../entities/DoctorAvailability");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 const appointmentRepository = database_1.AppDataSource.getRepository(Appointment_1.Appointment);
 const patientRepository = database_1.AppDataSource.getRepository(Patient_1.Patient);
 const doctorRepository = database_1.AppDataSource.getRepository(Doctor_1.Doctor);
 const userRepository = database_1.AppDataSource.getRepository(User_1.User);
+const availabilityRepository = database_1.AppDataSource.getRepository(DoctorAvailability_1.DoctorAvailability);
 router.use(auth_1.authenticateToken);
 // Get appointments (for current user)
 router.get('/', async (req, res) => {
@@ -102,7 +104,7 @@ router.get('/', async (req, res) => {
 // Create appointment
 router.post('/', async (req, res) => {
     try {
-        const { doctorId, appointmentDate, duration = 30, type = Appointment_1.AppointmentType.CONSULTATION, reason, symptoms } = req.body;
+        const { doctorId, appointmentDate, slotId, duration = 30, type = Appointment_1.AppointmentType.CONSULTATION, reason, symptoms } = req.body;
         if (!doctorId || !appointmentDate || !reason) {
             return res.status(400).json({
                 success: false,
@@ -142,20 +144,56 @@ router.post('/', async (req, res) => {
                 message: 'Appointment date must be in the future'
             });
         }
-        // Check for conflicts
-        const conflictingAppointment = await appointmentRepository.findOne({
-            where: {
-                doctor: { id: doctorId },
-                appointmentDate: appointmentDateTime,
-                status: Appointment_1.AppointmentStatus.SCHEDULED
-            }
-        });
-        if (conflictingAppointment) {
-            return res.status(409).json({
-                success: false,
-                message: 'Doctor is not available at this time'
+        // Check availability using the new slot system
+        let availabilitySlot = null;
+        if (slotId) {
+            // If slotId is provided, check that specific slot
+            availabilitySlot = await availabilityRepository.findOne({
+                where: {
+                    slotId: parseInt(slotId),
+                    doctor: { id: doctorId }
+                },
+                relations: ['doctor']
             });
+            if (!availabilitySlot) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Availability slot not found'
+                });
+            }
+            if (availabilitySlot.isBooked) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'This time slot is already booked'
+                });
+            }
+            if (availabilitySlot.startTime.getTime() !== appointmentDateTime.getTime()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Appointment date does not match the selected slot'
+                });
+            }
         }
+        else {
+            // If no slotId provided, find available slot for the requested time
+            availabilitySlot = await availabilityRepository.findOne({
+                where: {
+                    doctor: { id: doctorId },
+                    startTime: appointmentDateTime,
+                    isBooked: false
+                },
+                relations: ['doctor']
+            });
+            if (!availabilitySlot) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Doctor is not available at this time'
+                });
+            }
+        }
+        // Mark the slot as booked
+        availabilitySlot.isBooked = true;
+        await availabilityRepository.save(availabilitySlot);
         const appointment = appointmentRepository.create({
             patient,
             doctor,
@@ -182,6 +220,7 @@ router.post('/', async (req, res) => {
                 type: savedAppointment.type,
                 reason: savedAppointment.reason,
                 symptoms: savedAppointment.symptoms,
+                slotId: availabilitySlot.slotId,
                 patient: {
                     id: savedAppointment.patient.id,
                     firstName: savedAppointment.patient.firstName,
