@@ -37,6 +37,8 @@ import appointmentsRoutes from './routes/appointments';
 import medicationsRoutes from './routes/medications';
 import chatRoutes from './routes/chat';
 import healthRecordsRoutes from './routes/healthRecords';
+import doctorAvailabilityRoutes from './routes/doctorAvailability';
+import seedRoutes from './routes/seed';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientsRoutes);
@@ -45,6 +47,8 @@ app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/medications', medicationsRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/health-records', healthRecordsRoutes);
+app.use('/api/availability', doctorAvailabilityRoutes);
+app.use('/api/seed', seedRoutes);
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
