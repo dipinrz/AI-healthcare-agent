@@ -16,6 +16,7 @@ const Prescription_1 = require("./Prescription");
 const VitalSigns_1 = require("./VitalSigns");
 const LabResult_1 = require("./LabResult");
 const MedicalDocument_1 = require("./MedicalDocument");
+const DoctorAvailability_1 = require("./DoctorAvailability");
 let Doctor = class Doctor {
 };
 exports.Doctor = Doctor;
@@ -99,6 +100,10 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => MedicalDocument_1.MedicalDocument, document => document.createdBy),
     __metadata("design:type", Array)
 ], Doctor.prototype, "medicalDocuments", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => DoctorAvailability_1.DoctorAvailability, availability => availability.doctor),
+    __metadata("design:type", Array)
+], Doctor.prototype, "availabilitySlots", void 0);
 exports.Doctor = Doctor = __decorate([
     (0, typeorm_1.Entity)()
 ], Doctor);

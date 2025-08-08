@@ -385,4 +385,114 @@ router.get('/:id/prescriptions', async (req, res) => {
         });
     }
 });
+// Get patient summary with comprehensive medical data
+router.get('/:id/summary', async (req, res) => {
+    try {
+        const user = req.user;
+        const { id } = req.params;
+        const patient = await patientRepository.findOne({
+            where: { id },
+            relations: [
+                'appointments',
+                'appointments.doctor',
+                'prescriptions',
+                'prescriptions.medication',
+                'prescriptions.doctor',
+                'labResults',
+                'vitalSigns'
+            ]
+        });
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+        // Check permissions - patient can view own summary, doctors and admins can view any
+        if (user.role === 'patient') {
+            const currentPatient = await patientRepository.findOne({
+                where: { email: user.email }
+            });
+            if (!currentPatient || currentPatient.id !== patient.id) {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Access denied'
+                });
+            }
+        }
+        else if (user.role !== 'admin' && user.role !== 'doctor') {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied'
+            });
+        }
+        // Calculate age
+        const today = new Date();
+        const birthDate = new Date(patient.dateOfBirth);
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+        // Get latest completed appointment for last visit
+        const lastCompletedAppointment = patient.appointments
+            ?.filter(apt => apt.status === 'completed')
+            ?.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime())[0];
+        // Get current diagnoses from completed appointments
+        const diagnoses = patient.appointments
+            ?.filter(apt => apt.diagnosis && apt.status === 'completed')
+            ?.map(apt => apt.diagnosis)
+            ?.filter((diagnosis, index, self) => self.indexOf(diagnosis) === index) // Remove duplicates
+            ?.join(', ') || 'No diagnosis recorded';
+        // Get current medications from active prescriptions
+        const activeMedications = patient.prescriptions
+            ?.filter(prescription => prescription.status === 'active')
+            ?.map(prescription => prescription.medication?.name || 'Unknown medication')
+            ?.filter((med, index, self) => self.indexOf(med) === index) // Remove duplicates
+            ?.join(', ') || 'No medications prescribed';
+        // Get treatment plans from recent completed appointments
+        const recentTreatments = patient.appointments
+            ?.filter(apt => apt.treatment && apt.status === 'completed')
+            ?.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime())
+            ?.slice(0, 3)
+            ?.map(apt => apt.treatment)
+            ?.join(', ') || 'No treatment plan recorded';
+        // Get latest lab results
+        const latestLabResults = patient.labResults
+            ?.sort((a, b) => new Date(b.testDate).getTime() - new Date(a.testDate).getTime())
+            ?.slice(0, 3)
+            ?.map(lab => `${lab.testName}: ${lab.value}${lab.unit ? ' ' + lab.unit : ''}`)
+            ?.join(', ') || 'No lab results available';
+        // Get allergies
+        const allergiesText = patient.allergies && patient.allergies.length > 0
+            ? patient.allergies.join(', ')
+            : 'No known allergies';
+        const summary = {
+            patient_id: patient.id,
+            name: `${patient.firstName} ${patient.lastName}`,
+            age: age,
+            gender: patient.gender,
+            contact_no: patient.phone,
+            diagnosis: diagnoses,
+            medications: activeMedications,
+            treatment_plan: recentTreatments,
+            lab_results: latestLabResults,
+            allergies: allergiesText,
+            last_visit: lastCompletedAppointment
+                ? new Date(lastCompletedAppointment.appointmentDate).toISOString().split('T')[0]
+                : 'No completed visits'
+        };
+        res.json({
+            success: true,
+            data: summary
+        });
+    }
+    catch (error) {
+        console.error('Get patient summary error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch patient summary'
+        });
+    }
+});
 exports.default = router;
