@@ -1,17 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken } from '../middleware/auth';
-import { AppointmentAIService } from '../services/appointmentAIService';
+import { AppDataSource } from '../config/database';
+import { Patient } from '../entities/Patient';
+import axios from 'axios';
 
 const router = Router();
-const appointmentAI = new AppointmentAIService();
+const patientRepository = AppDataSource.getRepository(Patient);
 
-// In-memory session storage (replace with Redis in production)
-const conversationSessions = new Map();
+// External agent configuration
+const AGENT_URL = "https://patient-facing-virtual-assistant.onrender.com/agent/respond";
 
 // Protected routes
 router.use(authenticateToken);
 
-// AI-powered chat endpoint with appointment booking capabilities
+// AI-powered chat endpoint with external agent integration
 router.post('/message', async (req: Request, res: Response) => {
   try {
     const { message } = req.body;
@@ -24,30 +26,15 @@ router.post('/message', async (req: Request, res: Response) => {
       });
     }
 
-    // Only handle appointment-related queries for patients
+    // Only handle chat for patients
     if (user.role !== 'patient') {
-      // Fallback to simple responses for non-patients
-      const responses = {
-        greeting: "Hello! I'm your AI healthcare assistant. How can I help you today?",
-        default: "I'm here to help with your healthcare needs. As a healthcare provider, you can use the regular appointment management interface."
-      };
-
-      const lowerMessage = message.toLowerCase();
-      const response = (lowerMessage.includes('hello') || lowerMessage.includes('hi') || lowerMessage.includes('hey')) 
-        ? responses.greeting 
-        : responses.default;
-
-      return res.json({
-        success: true,
-        data: {
-          message: response,
-          timestamp: new Date().toISOString(),
-          type: 'assistant'
-        }
+      return res.status(403).json({
+        success: false,
+        message: 'Chat service is only available for patients'
       });
     }
 
-    // Get patient ID from JWT token
+    // Get patient ID and details
     const patientId = user.patientId;
     if (!patientId) {
       return res.status(400).json({
@@ -56,38 +43,83 @@ router.post('/message', async (req: Request, res: Response) => {
       });
     }
 
-    // Get or create conversation session
-    const sessionId = `${patientId}_${Date.now()}`;
-    let context = conversationSessions.get(patientId) || {};
+    // Get patient details for the external agent
+    const patient = await patientRepository.findOne({
+      where: { id: patientId }
+    });
 
-    // Process message with AI service
-    const result = await appointmentAI.processMessage(message, patientId, context);
-    
-    // Update conversation session
-    conversationSessions.set(patientId, result.context);
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
 
-    // Auto-expire sessions after 30 minutes of inactivity
-    setTimeout(() => {
-      conversationSessions.delete(patientId);
-    }, 30 * 60 * 1000);
+    // Get JWT token from request headers
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authorization header missing'
+      });
+    }
 
+    // Prepare payload for external agent
+    const payload = {
+      patient_id: patientId,
+      patient_name: `${patient.firstName} ${patient.lastName}`,
+      auth_token: authHeader, // Already includes "Bearer " prefix
+      message: message
+    };
+
+    console.log('Calling external agent with payload:', payload);
+
+    // Call external agent API
+    const agentResponse = await axios.post(AGENT_URL, payload, {
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      timeout: 30000 // 30 second timeout
+    });
+
+    // Return the agent's response
     res.json({
       success: true,
       data: {
-        message: result.response,
+        message: agentResponse.data.response || agentResponse.data.message || 'No response from agent',
         timestamp: new Date().toISOString(),
         type: 'assistant',
-        context: result.context,
-        actions: result.actions || []
+        agent: agentResponse.data.agent || 'Unknown',
+        agent_data: agentResponse.data
       }
     });
 
   } catch (error) {
     console.error('Chat message error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Sorry, I encountered an error processing your message. Please try again.'
-    });
+    
+    // Handle different types of errors
+    if (error.response) {
+      // External API error
+      console.error('External agent error:', error.response.data);
+      return res.status(500).json({
+        success: false,
+        message: 'Sorry, I encountered an error processing your message. Please try again.',
+        error_details: error.response.data
+      });
+    } else if (error.request) {
+      // Network error
+      console.error('Network error calling external agent');
+      return res.status(500).json({
+        success: false,
+        message: 'Sorry, I cannot connect to the assistant service right now. Please try again later.'
+      });
+    } else {
+      // Other error
+      return res.status(500).json({
+        success: false,
+        message: 'Sorry, I encountered an error processing your message. Please try again.'
+      });
+    }
   }
 });
 

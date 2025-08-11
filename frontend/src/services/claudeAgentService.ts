@@ -1,5 +1,6 @@
-// Claude Agent Service - Routes to actual Claude agents via Task tool
+// Claude Agent Service - Routes to external AI agent
 import hmsApiClient from './hmsApiClient';
+import axios from 'axios';
 
 export interface AgentResponse {
   success: boolean;
@@ -15,6 +16,7 @@ export interface AgentResponse {
 
 class ClaudeAgentService {
   private isInitialized: boolean = false;
+  private readonly EXTERNAL_AGENT_URL = "https://patient-facing-virtual-assistant.onrender.com/agent/respond";
 
   constructor() {
     this.initialize();
@@ -52,52 +54,96 @@ class ClaudeAgentService {
     return extracted;
   }
 
-  // Main message processing - routes to appropriate Claude agent
+  // Main message processing - routes to external AI agent
   async processMessage(message: string): Promise<AgentResponse> {
     if (!this.isInitialized) {
       await this.initialize();
     }
 
     try {
-      // Test NLP extraction first
-      this.testNLPExtraction(message);
-      
-      // Determine which agent to use based on message content
-      const agentType = this.determineAgentType(message);
-      
-      // Route to appropriate Claude agent
-      switch (agentType) {
-        case 'appointment':
-          return await this.routeToAppointmentScheduler(message);
-        case 'prescription':
-          return await this.routeToPrescriptionHelper(message);
-        case 'health':
-          return await this.routeToPatientAssistant(message);
-        case 'orchestrator':
-          return await this.routeToOrchestrator(message);
-        default:
-          return await this.routeToOrchestrator(message);
-      }
-    } catch (error: any) {
-      console.error('Claude Agent processing error:', error);
-      
-      // Handle authentication errors
-      if (error.message.includes('authentication') || error.message.includes('token')) {
+      // Get patient info from token
+      const patientInfo = await this.getPatientInfo();
+      if (!patientInfo.patientId || !patientInfo.patientName) {
         return {
           success: false,
-          message: `🔐 Your session has expired. Please refresh the page and log in again to access all healthcare features.\n\nDon't worry - I'm still here to provide general health support and guidance! How can I help you today? 💙`,
+          message: '🔐 Please log in to access the AI healthcare assistant.',
           type: 'general',
           actions: [
             { type: 'refresh_page', label: 'Refresh Page', data: {} }
           ]
         };
       }
-      
-      return {
-        success: false,
-        message: `I apologize, but I'm experiencing some technical difficulties right now. Let me try to help you anyway! 💙\n\nFor immediate assistance:\n• Call our office directly\n• Visit our patient portal\n• Try your request again in a moment\n\nHow else can I support you?`,
-        type: 'general'
+
+      // Prepare payload for external agent
+      const payload = {
+        patient_id: patientInfo.patientId,
+        patient_name: patientInfo.patientName,
+        auth_token: patientInfo.token, // Token already includes "Bearer" prefix
+        message: message
       };
+
+      console.log('🚀 Calling external agent with payload:', payload);
+
+      // Call external agent API
+      const response = await axios.post(this.EXTERNAL_AGENT_URL, payload, {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 30000 // 30 second timeout
+      });
+
+      // Transform external agent response to our format
+      const rawMessage = response.data.response || response.data.message || 'No response from agent';
+      return {
+        success: true,
+        message: this.formatMarkdownResponse(rawMessage),
+        type: 'general',
+        data: response.data,
+        actions: this.parseActionsFromResponse(rawMessage)
+      };
+
+    } catch (error: any) {
+      console.error('External Agent processing error:', error);
+      
+      // Handle different error types
+      if (error.response) {
+        // External API error
+        console.error('External agent error:', error.response.data);
+        return {
+          success: false,
+          message: `I apologize, but I'm experiencing some technical difficulties right now. Let me try to help you anyway! 💙\n\nFor immediate assistance:\n• Call our office directly\n• Visit our patient portal\n• Try your request again in a moment\n\nHow else can I support you?`,
+          type: 'general'
+        };
+      } else if (error.request) {
+        // Network error
+        console.error('Network error calling external agent');
+        return {
+          success: false,
+          message: `🌐 I cannot connect to the AI assistant service right now. Please check your internet connection and try again.\n\nFor immediate assistance:\n• Call our office directly\n• Visit our patient portal\n• Try again in a few moments`,
+          type: 'general',
+          actions: [
+            { type: 'retry_message', label: 'Try Again', data: { message } }
+          ]
+        };
+      } else {
+        // Handle authentication errors
+        if (error.message.includes('authentication') || error.message.includes('token')) {
+          return {
+            success: false,
+            message: `🔐 Your session has expired. Please refresh the page and log in again to access all healthcare features.\n\nDon't worry - I'm still here to provide general health support and guidance! How can I help you today? 💙`,
+            type: 'general',
+            actions: [
+              { type: 'refresh_page', label: 'Refresh Page', data: {} }
+            ]
+          };
+        }
+        
+        return {
+          success: false,
+          message: `I apologize, but I'm experiencing some technical difficulties right now. Let me try to help you anyway! 💙\n\nFor immediate assistance:\n• Call our office directly\n• Visit our patient portal\n• Try your request again in a moment\n\nHow else can I support you?`,
+          type: 'general'
+        };
+      }
     }
   }
 
@@ -780,6 +826,102 @@ class ClaudeAgentService {
       console.error('Failed to get patient context:', error);
       return { authenticated: false };
     }
+  }
+
+  // Helper to extract patient info from JWT token
+  private async getPatientInfo(): Promise<{patientId?: string, patientName?: string, token?: string}> {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token');
+      if (!token) {
+        return {};
+      }
+
+      // Decode JWT token to get patient info
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      
+      // Get patient name from API if we have patientId
+      if (payload.patientId) {
+        try {
+          // Try to get patient name from HMS API
+          const response = await hmsApiClient.getProfile();
+          if (response.success && response.data) {
+            return {
+              patientId: payload.patientId,
+              patientName: `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim(),
+              token: token
+            };
+          }
+        } catch (error) {
+          console.warn('Could not fetch patient profile, using token data only');
+        }
+        
+        // Fallback to token data only
+        return {
+          patientId: payload.patientId,
+          patientName: `Patient ${payload.patientId.substring(0, 8)}`,
+          token: token
+        };
+      }
+
+      return { token };
+    } catch (error) {
+      console.error('Failed to get patient info:', error);
+      return {};
+    }
+  }
+
+  // Helper to format markdown response into clean text
+  private formatMarkdownResponse(markdown: string): string {
+    if (!markdown) return '';
+
+    let formatted = markdown;
+
+    // Convert markdown headings to clean text with emojis
+    formatted = formatted
+      // Convert ### headers to section with emoji
+      .replace(/### ([^\n]+)/g, '📋 $1')
+      // Convert ** bold ** to regular text (remove markdown)
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      // Convert * bullet points to emoji bullets
+      .replace(/^\s*[-*]\s*\*\*([^*]+)\*\*:\s*/gm, '• $1: ')
+      .replace(/^\s*[-*]\s*/gm, '• ')
+      // Clean up extra asterisks
+      .replace(/\*+/g, '')
+      // Fix multiple spaces and newlines
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    // Add emojis for better visual appeal
+    formatted = formatted
+      .replace(/📋 Appointment Details:/gi, '📅 Appointment Details:')
+      .replace(/Date:/gi, '📅 Date:')
+      .replace(/Time:/gi, '🕐 Time:')
+      .replace(/Doctor:/gi, '👨‍⚕️ Doctor:')
+      .replace(/Department:/gi, '🏥 Department:')
+      .replace(/Reason:/gi, '📝 Reason:')
+      .replace(/Status:/gi, '✅ Status:');
+
+    return formatted;
+  }
+
+  // Helper to parse action buttons from agent response
+  private parseActionsFromResponse(responseText: string): any[] {
+    const actions = [];
+    
+    // Look for common patterns in appointment booking responses
+    if (responseText.toLowerCase().includes('appointment') && responseText.toLowerCase().includes('booked')) {
+      actions.push({ type: 'view_appointments', label: '📅 View My Appointments', data: {} });
+      actions.push({ type: 'book_another', label: '➕ Book Another', data: {} });
+    } else if (responseText.toLowerCase().includes('book') || responseText.toLowerCase().includes('appointment')) {
+      actions.push({ type: 'view_all_doctors', label: '👨‍⚕️ View Doctors', data: {} });
+      actions.push({ type: 'check_availability', label: '📅 Check Availability', data: {} });
+    } else if (responseText.toLowerCase().includes('unable to access') || responseText.toLowerCase().includes('technical issue')) {
+      actions.push({ type: 'retry_request', label: '🔄 Try Again', data: {} });
+      actions.push({ type: 'contact_support', label: '📞 Contact Support', data: {} });
+    }
+    
+    return actions;
   }
 
   // Helper to detect emotional context in messages
