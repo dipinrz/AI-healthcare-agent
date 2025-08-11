@@ -1013,4 +1013,132 @@ router.post('/book-slot', async (req: Request, res: Response) => {
   }
 });
 
+// Get all appointments for a patient with optional filters
+router.get('/patient/:patientId', async (req: Request, res: Response) => {
+  try {
+    const { patientId } = req.params;
+    const { appointmentDate, doctorId } = req.query;
+
+    if (!patientId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Patient ID is required'
+      });
+    }
+
+    // Verify patient exists
+    const patient = await patientRepository.findOne({
+      where: { id: patientId }
+    });
+
+    if (!patient) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patient not found'
+      });
+    }
+
+    // Build the query conditions
+    const whereConditions: any = {
+      patient: { id: patientId }
+    };
+
+    // Add optional filters
+    if (doctorId) {
+      whereConditions.doctor = { id: doctorId as string };
+    }
+
+    if (appointmentDate) {
+      // Parse the date and create date range for the entire day
+      const targetDate = new Date(appointmentDate as string);
+      if (isNaN(targetDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid appointment date format'
+        });
+      }
+
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      // Use query builder for date range
+      const queryBuilder = appointmentRepository
+        .createQueryBuilder('appointment')
+        .leftJoinAndSelect('appointment.patient', 'patient')
+        .leftJoinAndSelect('appointment.doctor', 'doctor')
+        .where('appointment.patientId = :patientId', { patientId })
+        .andWhere('appointment.appointmentDate >= :startOfDay', { startOfDay })
+        .andWhere('appointment.appointmentDate <= :endOfDay', { endOfDay });
+
+      if (doctorId) {
+        queryBuilder.andWhere('appointment.doctorId = :doctorId', { doctorId });
+      }
+
+      const appointments = await queryBuilder
+        .orderBy('appointment.appointmentDate', 'DESC')
+        .getMany();
+
+      const formattedAppointments = appointments.map(apt => ({
+        appointmentId: apt.id,
+        patientName: `${apt.patient.firstName} ${apt.patient.lastName}`,
+        doctorId: apt.doctor.id,
+        doctorName: `Dr. ${apt.doctor.firstName} ${apt.doctor.lastName}`,
+        appointmentDate: apt.appointmentDate,
+        status: apt.status,
+        type: apt.type,
+        reason: apt.reason
+      }));
+
+      return res.json({
+        success: true,
+        message: 'Patient appointments retrieved successfully',
+        data: formattedAppointments,
+        filters: {
+          patientId,
+          appointmentDate: appointmentDate as string,
+          doctorId: doctorId as string || null
+        }
+      });
+    }
+
+    // Query without date filter
+    const appointments = await appointmentRepository.find({
+      where: whereConditions,
+      relations: ['patient', 'doctor'],
+      order: { appointmentDate: 'DESC' }
+    });
+
+    const formattedAppointments = appointments.map(apt => ({
+      appointmentId: apt.id,
+      patientName: `${apt.patient.firstName} ${apt.patient.lastName}`,
+      doctorId: apt.doctor.id,
+      doctorName: `Dr. ${apt.doctor.firstName} ${apt.doctor.lastName}`,
+      appointmentDate: apt.appointmentDate,
+      status: apt.status,
+      type: apt.type,
+      reason: apt.reason
+    }));
+
+    res.json({
+      success: true,
+      message: 'Patient appointments retrieved successfully',
+      data: formattedAppointments,
+      filters: {
+        patientId,
+        appointmentDate: null,
+        doctorId: doctorId as string || null
+      }
+    });
+
+  } catch (error) {
+    console.error('Get patient appointments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch patient appointments'
+    });
+  }
+});
+
 export default router;
