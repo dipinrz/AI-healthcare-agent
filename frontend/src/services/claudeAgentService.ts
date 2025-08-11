@@ -85,10 +85,39 @@ class ClaudeAgentService {
 
       // Transform external agent response to our format
       const responseData = response.data as any;
-      const rawMessage = responseData.response || responseData.message || 'No response from agent';
+      
+      // Log the complete response structure
+      console.log('🔍 Complete API response structure:', JSON.stringify(responseData, null, 2));
+      console.log('🔍 Response keys:', Object.keys(responseData || {}));
+      
+      // Try to extract message from various possible fields
+      const possibleMessageFields = [
+        responseData.response,
+        responseData.message, 
+        responseData.content,
+        responseData.text,
+        responseData.reply,
+        responseData.output,
+        responseData.result
+      ];
+      
+      let rawMessage = 'No response from agent';
+      for (const field of possibleMessageFields) {
+        if (field && typeof field === 'string' && field.trim()) {
+          rawMessage = field;
+          break;
+        }
+      }
+      
+      console.log('📝 Extracted message:', rawMessage);
+      console.log('📝 Message length:', rawMessage.length);
+      
+      // SHOW COMPLETE RAW RESPONSE - No formatting applied
+      const displayMessage = rawMessage;
+      
       return {
         success: true,
-        message: this.formatMarkdownResponse(rawMessage),
+        message: displayMessage,
         type: 'general',
         data: responseData,
         actions: this.parseActionsFromResponse(rawMessage)
@@ -188,40 +217,6 @@ class ClaudeAgentService {
     }
   }
 
-  // Helper to format markdown response into clean text
-  private formatMarkdownResponse(markdown: string): string {
-    if (!markdown) return '';
-
-    let formatted = markdown;
-
-    // Convert markdown headings to clean text with emojis
-    formatted = formatted
-      // Convert ### headers to section with emoji
-      .replace(/### ([^\n]+)/g, '📋 $1')
-      // Convert ** bold ** to regular text (remove markdown)
-      .replace(/\*\*([^*]+)\*\*/g, '$1')
-      // Convert * bullet points to emoji bullets
-      .replace(/^\s*[-*]\s*\*\*([^*]+)\*\*:\s*/gm, '• $1: ')
-      .replace(/^\s*[-*]\s*/gm, '• ')
-      // Clean up extra asterisks
-      .replace(/\*+/g, '')
-      // Fix multiple spaces and newlines
-      .replace(/\n\s*\n\s*\n+/g, '\n\n')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Add emojis for better visual appeal
-    formatted = formatted
-      .replace(/📋 Appointment Details:/gi, '📅 Appointment Details:')
-      .replace(/Date:/gi, '📅 Date:')
-      .replace(/Time:/gi, '🕐 Time:')
-      .replace(/Doctor:/gi, '👨‍⚕️ Doctor:')
-      .replace(/Department:/gi, '🏥 Department:')
-      .replace(/Reason:/gi, '📝 Reason:')
-      .replace(/Status:/gi, '✅ Status:');
-
-    return formatted;
-  }
 
   // Helper to parse action buttons from agent response
   private parseActionsFromResponse(responseText: string): any[] {

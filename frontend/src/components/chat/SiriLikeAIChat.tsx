@@ -108,7 +108,7 @@ interface Message {
   text: string;
   isBot: boolean;
   timestamp: Date;
-  type?: 'text' | 'suggestion' | 'care' | 'diagnostic' | 'appointment' | 'prescription' | 'health';
+  type?: 'text' | 'suggestion' | 'care' | 'diagnostic' | 'appointment' | 'prescription' | 'health' | 'general';
   emotion?: 'supportive' | 'encouraging' | 'empathetic' | 'reassuring';
   actions?: Array<{
     type: string;
@@ -388,9 +388,38 @@ const SiriLikeAIChat: React.FC = () => {
               throw new Error('No available slots found');
             }
           } catch (error) {
-            await claudeAgentService.processMessage(
-              `I want to book with ${action.data.doctorName}`
-            );
+            // Fallback: ask the external agent about this doctor
+            try {
+              const fallbackResponse = await claudeAgentService.processMessage(
+                `I want to book with ${action.data.doctorName}`
+              );
+              
+              const fallbackMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                text: fallbackResponse.message,
+                isBot: true,
+                timestamp: new Date(),
+                type: fallbackResponse.type as any,
+                emotion: fallbackResponse.success ? 'supportive' : 'empathetic',
+                actions: fallbackResponse.actions,
+                agentData: fallbackResponse.data
+              };
+              
+              setMessages(prev => [...prev, fallbackMessage]);
+            } catch (fallbackError) {
+              console.error('Fallback error:', fallbackError);
+              
+              const errorMessage: Message = {
+                id: (Date.now() + 1).toString(),
+                text: `I'm sorry, I couldn't find available slots for ${action.data.doctorName} right now. Please try again later or contact our office directly. 📞`,
+                isBot: true,
+                timestamp: new Date(),
+                type: 'appointment',
+                emotion: 'empathetic'
+              };
+              
+              setMessages(prev => [...prev, errorMessage]);
+            }
           }
           break;
         
@@ -425,9 +454,37 @@ const SiriLikeAIChat: React.FC = () => {
           break;
         
         case 'medication_details':
-          await claudeAgentService.processMessage(
-            `Tell me more about medication ID ${action.data.medicationId}`
-          );
+          try {
+            const medicationResponse = await claudeAgentService.processMessage(
+              `Tell me more about medication ID ${action.data.medicationId}`
+            );
+            
+            const medicationMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              text: medicationResponse.message,
+              isBot: true,
+              timestamp: new Date(),
+              type: medicationResponse.type as any,
+              emotion: medicationResponse.success ? 'supportive' : 'empathetic',
+              actions: medicationResponse.actions,
+              agentData: medicationResponse.data
+            };
+            
+            setMessages(prev => [...prev, medicationMessage]);
+          } catch (error) {
+            console.error('Medication details error:', error);
+            
+            const errorMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              text: "I'm sorry, I couldn't retrieve medication details right now. Please consult with your healthcare provider or pharmacist for medication information. 💊",
+              isBot: true,
+              timestamp: new Date(),
+              type: 'prescription',
+              emotion: 'empathetic'
+            };
+            
+            setMessages(prev => [...prev, errorMessage]);
+          }
           break;
         
         case 'refresh_page':
@@ -435,8 +492,36 @@ const SiriLikeAIChat: React.FC = () => {
           break;
         
         default:
-          // Generic action handling
-          await claudeAgentService.processMessage(action.label);
+          // Generic action handling - process message and display response
+          try {
+            const actionResponse = await claudeAgentService.processMessage(action.label);
+            
+            const actionMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              text: actionResponse.message,
+              isBot: true,
+              timestamp: new Date(),
+              type: actionResponse.type as any,
+              emotion: actionResponse.success ? 'supportive' : 'empathetic',
+              actions: actionResponse.actions,
+              agentData: actionResponse.data
+            };
+            
+            setMessages(prev => [...prev, actionMessage]);
+          } catch (error) {
+            console.error('Generic action handling error:', error);
+            
+            const errorMessage: Message = {
+              id: (Date.now() + 1).toString(),
+              text: "I apologize, but I'm having trouble processing that request right now. Please try again or let me know how else I can help you! 💙",
+              isBot: true,
+              timestamp: new Date(),
+              type: 'general',
+              emotion: 'empathetic'
+            };
+            
+            setMessages(prev => [...prev, errorMessage]);
+          }
       }
     } catch (error) {
       console.error('Action handling error:', error);
@@ -833,6 +918,8 @@ const SiriLikeAIChat: React.FC = () => {
                         lineHeight: 1.7,
                         mb: 1,
                         fontWeight: message.isBot ? 400 : 500,
+                        whiteSpace: 'pre-wrap', // Preserve line breaks and whitespace
+                        wordWrap: 'break-word', // Prevent overflow
                       }}
                     >
                       {message.text}
