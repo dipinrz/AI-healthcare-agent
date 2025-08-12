@@ -288,20 +288,36 @@ router.put('/:id/reschedule', async (req, res) => {
                 message: 'New appointment date must be in the future'
             });
         }
-        // Check for conflicts
-        const conflictingAppointment = await appointmentRepository.findOne({
+        // Find the old slot and release it
+        const oldSlot = await availabilityRepository.findOne({
             where: {
                 doctor: { id: appointment.doctor.id },
-                appointmentDate: newDate,
-                status: Appointment_1.AppointmentStatus.SCHEDULED
+                startTime: appointment.appointmentDate,
+                isBooked: true
             }
         });
-        if (conflictingAppointment && conflictingAppointment.id !== appointment.id) {
+        if (oldSlot) {
+            oldSlot.isBooked = false;
+            await availabilityRepository.save(oldSlot);
+        }
+        // Find and book the new slot
+        const newSlot = await availabilityRepository.findOne({
+            where: {
+                doctor: { id: appointment.doctor.id },
+                startTime: newDate,
+                isBooked: false
+            }
+        });
+        if (!newSlot) {
             return res.status(409).json({
                 success: false,
-                message: 'Doctor is not available at this time'
+                message: 'Doctor is not available at this time - no available slot'
             });
         }
+        // Book the new slot
+        newSlot.isBooked = true;
+        await availabilityRepository.save(newSlot);
+        // Update appointment
         appointment.appointmentDate = newDate;
         await appointmentRepository.save(appointment);
         res.json({
@@ -363,6 +379,18 @@ router.put('/:id/cancel', async (req, res) => {
                 success: false,
                 message: 'Cannot cancel completed appointments'
             });
+        }
+        // Find and release the booked slot
+        const bookedSlot = await availabilityRepository.findOne({
+            where: {
+                doctor: { id: appointment.doctor.id },
+                startTime: appointment.appointmentDate,
+                isBooked: true
+            }
+        });
+        if (bookedSlot) {
+            bookedSlot.isBooked = false;
+            await availabilityRepository.save(bookedSlot);
         }
         appointment.status = Appointment_1.AppointmentStatus.CANCELLED;
         await appointmentRepository.save(appointment);
@@ -546,6 +574,440 @@ router.put('/:id/complete', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Failed to complete appointment'
+        });
+    }
+});
+// Reschedule appointment using patient ID and new slot ID
+router.put('/patient/:patientId/appointment/:appointmentId/reschedule', async (req, res) => {
+    try {
+        const { patientId, appointmentId } = req.params;
+        const { newSlotId } = req.body;
+        if (!newSlotId) {
+            return res.status(400).json({
+                success: false,
+                message: 'New slot ID is required'
+            });
+        }
+        // Verify patient exists
+        const patient = await patientRepository.findOne({
+            where: { id: patientId }
+        });
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+        // Get the appointment
+        const appointment = await appointmentRepository.findOne({
+            where: {
+                id: appointmentId,
+                patient: { id: patientId }
+            },
+            relations: ['patient', 'doctor']
+        });
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Appointment not found for this patient'
+            });
+        }
+        if (appointment.status !== Appointment_1.AppointmentStatus.SCHEDULED) {
+            return res.status(400).json({
+                success: false,
+                message: 'Can only reschedule scheduled appointments'
+            });
+        }
+        // Get the new slot
+        const newSlot = await availabilityRepository.findOne({
+            where: { slotId: parseInt(newSlotId) },
+            relations: ['doctor']
+        });
+        if (!newSlot) {
+            return res.status(404).json({
+                success: false,
+                message: 'New slot not found'
+            });
+        }
+        if (newSlot.isBooked) {
+            return res.status(409).json({
+                success: false,
+                message: 'New slot is already booked'
+            });
+        }
+        if (newSlot.startTime <= new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot reschedule to past slots'
+            });
+        }
+        // Must be same doctor
+        if (newSlot.doctor.id !== appointment.doctor.id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot reschedule to a different doctor'
+            });
+        }
+        // Release old slot
+        const oldSlot = await availabilityRepository.findOne({
+            where: {
+                doctor: { id: appointment.doctor.id },
+                startTime: appointment.appointmentDate,
+                isBooked: true
+            }
+        });
+        if (oldSlot) {
+            oldSlot.isBooked = false;
+            await availabilityRepository.save(oldSlot);
+        }
+        // Book new slot
+        newSlot.isBooked = true;
+        await availabilityRepository.save(newSlot);
+        // Update appointment
+        appointment.appointmentDate = newSlot.startTime;
+        await appointmentRepository.save(appointment);
+        res.json({
+            success: true,
+            message: 'Appointment rescheduled successfully',
+            data: {
+                appointmentId: appointment.id,
+                oldSlotId: oldSlot?.slotId || null,
+                newSlotId: newSlot.slotId,
+                newAppointmentDate: appointment.appointmentDate,
+                patient: {
+                    id: appointment.patient.id,
+                    name: `${appointment.patient.firstName} ${appointment.patient.lastName}`
+                },
+                doctor: {
+                    id: appointment.doctor.id,
+                    name: `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Reschedule appointment with patient ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to reschedule appointment'
+        });
+    }
+});
+// Cancel appointment using patient ID
+router.put('/patient/:patientId/appointment/:appointmentId/cancel', async (req, res) => {
+    try {
+        const { patientId, appointmentId } = req.params;
+        const { reason } = req.body; // Optional cancellation reason
+        // Verify patient exists
+        const patient = await patientRepository.findOne({
+            where: { id: patientId }
+        });
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+        // Get the appointment
+        const appointment = await appointmentRepository.findOne({
+            where: {
+                id: appointmentId,
+                patient: { id: patientId }
+            },
+            relations: ['patient', 'doctor']
+        });
+        if (!appointment) {
+            return res.status(404).json({
+                success: false,
+                message: 'Appointment not found for this patient'
+            });
+        }
+        if (appointment.status === Appointment_1.AppointmentStatus.CANCELLED) {
+            return res.status(400).json({
+                success: false,
+                message: 'Appointment is already cancelled'
+            });
+        }
+        if (appointment.status === Appointment_1.AppointmentStatus.COMPLETED) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot cancel completed appointments'
+            });
+        }
+        // Find and release the booked slot
+        const bookedSlot = await availabilityRepository.findOne({
+            where: {
+                doctor: { id: appointment.doctor.id },
+                startTime: appointment.appointmentDate,
+                isBooked: true
+            }
+        });
+        if (bookedSlot) {
+            bookedSlot.isBooked = false;
+            await availabilityRepository.save(bookedSlot);
+        }
+        // Update appointment
+        appointment.status = Appointment_1.AppointmentStatus.CANCELLED;
+        if (reason) {
+            appointment.notes = (appointment.notes || '') + `\nCancellation reason: ${reason}`;
+        }
+        await appointmentRepository.save(appointment);
+        res.json({
+            success: true,
+            message: 'Appointment cancelled successfully',
+            data: {
+                appointmentId: appointment.id,
+                releasedSlotId: bookedSlot?.slotId || null,
+                cancelledDate: new Date(),
+                reason: reason || 'No reason provided',
+                patient: {
+                    id: appointment.patient.id,
+                    name: `${appointment.patient.firstName} ${appointment.patient.lastName}`
+                },
+                doctor: {
+                    id: appointment.doctor.id,
+                    name: `Dr. ${appointment.doctor.firstName} ${appointment.doctor.lastName}`
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Cancel appointment with patient ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cancel appointment'
+        });
+    }
+});
+// Book appointment using patient ID and slot ID
+router.post('/book-slot', async (req, res) => {
+    try {
+        const { patientId, slotId, reason, symptoms, type = Appointment_1.AppointmentType.CONSULTATION } = req.body;
+        if (!patientId || !slotId || !reason) {
+            return res.status(400).json({
+                success: false,
+                message: 'Patient ID, slot ID, and reason are required'
+            });
+        }
+        // Verify patient exists
+        const patient = await patientRepository.findOne({
+            where: { id: patientId }
+        });
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+        // Get the availability slot
+        const availabilitySlot = await availabilityRepository.findOne({
+            where: { slotId: parseInt(slotId) },
+            relations: ['doctor']
+        });
+        if (!availabilitySlot) {
+            return res.status(404).json({
+                success: false,
+                message: 'Availability slot not found'
+            });
+        }
+        if (availabilitySlot.isBooked) {
+            return res.status(409).json({
+                success: false,
+                message: 'This time slot is already booked'
+            });
+        }
+        // Check if the slot time is in the future
+        if (availabilitySlot.startTime <= new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot book slots in the past'
+            });
+        }
+        // Check for existing appointment conflicts for this patient
+        const existingAppointment = await appointmentRepository.findOne({
+            where: {
+                patient: { id: patientId },
+                appointmentDate: availabilitySlot.startTime,
+                status: Appointment_1.AppointmentStatus.SCHEDULED
+            }
+        });
+        if (existingAppointment) {
+            return res.status(409).json({
+                success: false,
+                message: 'Patient already has an appointment at this time'
+            });
+        }
+        // Mark the slot as booked
+        availabilitySlot.isBooked = true;
+        await availabilityRepository.save(availabilitySlot);
+        // Create the appointment
+        const appointment = appointmentRepository.create({
+            patient,
+            doctor: availabilitySlot.doctor,
+            appointmentDate: availabilitySlot.startTime,
+            duration: 30, // Default 30 minutes
+            type,
+            reason,
+            symptoms: symptoms || '',
+            status: Appointment_1.AppointmentStatus.SCHEDULED
+        });
+        await appointmentRepository.save(appointment);
+        const savedAppointment = await appointmentRepository.findOne({
+            where: { id: appointment.id },
+            relations: ['patient', 'doctor']
+        });
+        res.status(201).json({
+            success: true,
+            message: 'Appointment booked successfully using slot',
+            data: {
+                appointmentId: savedAppointment.id,
+                slotId: availabilitySlot.slotId,
+                appointmentDate: savedAppointment.appointmentDate,
+                duration: savedAppointment.duration,
+                status: savedAppointment.status,
+                type: savedAppointment.type,
+                reason: savedAppointment.reason,
+                symptoms: savedAppointment.symptoms,
+                patient: {
+                    id: savedAppointment.patient.id,
+                    name: `${savedAppointment.patient.firstName} ${savedAppointment.patient.lastName}`,
+                    phone: savedAppointment.patient.phone,
+                    email: savedAppointment.patient.email
+                },
+                doctor: {
+                    id: savedAppointment.doctor.id,
+                    name: `Dr. ${savedAppointment.doctor.firstName} ${savedAppointment.doctor.lastName}`,
+                    specialization: savedAppointment.doctor.specialization,
+                    qualification: savedAppointment.doctor.qualification,
+                    department: savedAppointment.doctor.department,
+                    phone: savedAppointment.doctor.phone
+                },
+                slot: {
+                    slotId: availabilitySlot.slotId,
+                    startTime: availabilitySlot.startTime.toISOString().replace('T', ' ').substring(0, 16),
+                    endTime: availabilitySlot.endTime.toISOString().replace('T', ' ').substring(0, 16),
+                    isBooked: availabilitySlot.isBooked
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Book appointment with slot error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to book appointment'
+        });
+    }
+});
+// Get all appointments for a patient with optional filters
+router.get('/patient/:patientId', async (req, res) => {
+    try {
+        const { patientId } = req.params;
+        const { appointmentDate, doctorId } = req.query;
+        if (!patientId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Patient ID is required'
+            });
+        }
+        // Verify patient exists
+        const patient = await patientRepository.findOne({
+            where: { id: patientId }
+        });
+        if (!patient) {
+            return res.status(404).json({
+                success: false,
+                message: 'Patient not found'
+            });
+        }
+        // Build the query conditions
+        const whereConditions = {
+            patient: { id: patientId }
+        };
+        // Add optional filters
+        if (doctorId) {
+            whereConditions.doctor = { id: doctorId };
+        }
+        if (appointmentDate) {
+            // Parse the date and create date range for the entire day
+            const targetDate = new Date(appointmentDate);
+            if (isNaN(targetDate.getTime())) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid appointment date format'
+                });
+            }
+            const startOfDay = new Date(targetDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(targetDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            // Use query builder for date range
+            const queryBuilder = appointmentRepository
+                .createQueryBuilder('appointment')
+                .leftJoinAndSelect('appointment.patient', 'patient')
+                .leftJoinAndSelect('appointment.doctor', 'doctor')
+                .where('appointment.patientId = :patientId', { patientId })
+                .andWhere('appointment.appointmentDate >= :startOfDay', { startOfDay })
+                .andWhere('appointment.appointmentDate <= :endOfDay', { endOfDay });
+            if (doctorId) {
+                queryBuilder.andWhere('appointment.doctorId = :doctorId', { doctorId });
+            }
+            const appointments = await queryBuilder
+                .orderBy('appointment.appointmentDate', 'DESC')
+                .getMany();
+            const formattedAppointments = appointments.map(apt => ({
+                appointmentId: apt.id,
+                patientName: `${apt.patient.firstName} ${apt.patient.lastName}`,
+                doctorId: apt.doctor.id,
+                doctorName: `Dr. ${apt.doctor.firstName} ${apt.doctor.lastName}`,
+                appointmentDate: apt.appointmentDate,
+                status: apt.status,
+                type: apt.type,
+                reason: apt.reason
+            }));
+            return res.json({
+                success: true,
+                message: 'Patient appointments retrieved successfully',
+                data: formattedAppointments,
+                filters: {
+                    patientId,
+                    appointmentDate: appointmentDate,
+                    doctorId: doctorId || null
+                }
+            });
+        }
+        // Query without date filter
+        const appointments = await appointmentRepository.find({
+            where: whereConditions,
+            relations: ['patient', 'doctor'],
+            order: { appointmentDate: 'DESC' }
+        });
+        const formattedAppointments = appointments.map(apt => ({
+            appointmentId: apt.id,
+            patientName: `${apt.patient.firstName} ${apt.patient.lastName}`,
+            doctorId: apt.doctor.id,
+            doctorName: `Dr. ${apt.doctor.firstName} ${apt.doctor.lastName}`,
+            appointmentDate: apt.appointmentDate,
+            status: apt.status,
+            type: apt.type,
+            reason: apt.reason
+        }));
+        res.json({
+            success: true,
+            message: 'Patient appointments retrieved successfully',
+            data: formattedAppointments,
+            filters: {
+                patientId,
+                appointmentDate: null,
+                doctorId: doctorId || null
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get patient appointments error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch patient appointments'
         });
     }
 });
