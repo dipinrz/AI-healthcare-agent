@@ -920,6 +920,7 @@ const SiriLikeAIChat: React.FC = () => {
                         fontWeight: message.isBot ? 400 : 500,
                         whiteSpace: 'pre-wrap', // Preserve line breaks and whitespace
                         wordWrap: 'break-word', // Prevent overflow
+                        color: message.isBot ? theme.palette.text.primary : '#ffffff', // Explicitly white for user messages
                       }}
                     >
                       {message.text}
@@ -930,6 +931,7 @@ const SiriLikeAIChat: React.FC = () => {
                         opacity: 0.7,
                         fontSize: '0.75rem',
                         fontWeight: 500,
+                        color: message.isBot ? theme.palette.text.secondary : 'rgba(255, 255, 255, 0.9)', // White with opacity for user timestamps
                       }}
                     >
                       {message.timestamp.toLocaleTimeString([], {
