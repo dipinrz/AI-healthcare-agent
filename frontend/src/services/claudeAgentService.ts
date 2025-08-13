@@ -1,5 +1,6 @@
 // Claude Agent Service - Routes to external AI agent
 import hmsApiClient from './hmsApiClient';
+import authService from './authService';
 import axios from 'axios';
 
 export interface AgentResponse {
@@ -181,6 +182,23 @@ class ClaudeAgentService {
         return {};
       }
 
+      // First try to get user data from localStorage (stored after login)
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          if (user.patient && user.patient.firstName && user.patient.lastName) {
+            return {
+              patientId: user.patient.id,
+              patientName: `${user.patient.firstName} ${user.patient.lastName}`,
+              token: token
+            };
+          }
+        }
+      } catch (error) {
+        console.warn('Could not get user from localStorage');
+      }
+
       // Decode JWT token to get patient info
       const payload = JSON.parse(atob(token.split('.')[1]));
       
@@ -197,6 +215,16 @@ class ClaudeAgentService {
                 token: token
               };
             }
+          }
+
+          // Try to get from authService
+          const authProfile = await authService.getProfile();
+          if (authProfile.success && authProfile.user && authProfile.user.patient) {
+            return {
+              patientId: payload.patientId,
+              patientName: `${authProfile.user.patient.firstName} ${authProfile.user.patient.lastName}`,
+              token: token
+            };
           }
         } catch (error) {
           console.warn('Could not fetch patient profile, using token data only');
