@@ -22,7 +22,10 @@ router.put('/slot/:slotId/availability', authenticateToken, requireDoctorOrAdmin
 
 // Admin-only routes
 router.post('/generate-all-slots', authenticateToken, requireAdmin, asyncHandler(doctorAvailabilityController.generateSlotsForAllDoctors));
-router.post('/seed-data', authenticateToken, requireAdmin, asyncHandler(doctorAvailabilityController.generateSlotsForAllDoctors)); // Legacy compatibility
+router.post('/seed-data', authenticateToken,
+    //  requireAdmin,
+      asyncHandler(doctorAvailabilityController.generateSlotsForAllDoctors)); // Legacy compatibility
+router.post('/public-seed-data', asyncHandler(doctorAvailabilityController.generateSlotsForAllDoctors)); // Temporary public endpoint
 router.delete('/clear-old-slots', authenticateToken, requireAdmin, asyncHandler(doctorAvailabilityController.clearOldSlots));
 
 export default router;
