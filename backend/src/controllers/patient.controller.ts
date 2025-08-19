@@ -177,4 +177,20 @@ export class PatientController {
       next(error);
     }
   };
+
+  getPatientSummary = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { id } = req.params;
+      const summary = await this.patientService.getPatientSummary(id);
+
+      ResponseHandler.success(
+        res,
+        'Patient summary retrieved successfully',
+        summary
+      );
+    } catch (error) {
+      logger.error('Get patient summary error:', error);
+      next(error);
+    }
+  };
 }

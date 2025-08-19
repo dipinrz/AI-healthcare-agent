@@ -13,6 +13,7 @@ router.get('/stats', authenticateToken, requireDoctorOrAdmin, asyncHandler(patie
 
 // Patient-specific routes
 router.get('/:id', authenticateToken, asyncHandler(patientController.getPatientById));
+router.get('/:id/summary', authenticateToken, asyncHandler(patientController.getPatientSummary));
 router.get('/:id/appointments', authenticateToken, asyncHandler(patientController.getPatientAppointments));
 router.get('/:id/prescriptions', authenticateToken, asyncHandler(patientController.getPatientPrescriptions));
 

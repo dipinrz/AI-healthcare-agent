@@ -222,5 +222,90 @@ class PatientService {
             throw error;
         }
     }
+    async getPatientSummary(patientId) {
+        try {
+            const patient = await this.patientRepository.findById(patientId);
+            if (!patient) {
+                throw new Error(messages_1.MESSAGES.ERROR.PATIENT_NOT_FOUND);
+            }
+            // Get appointments (recent and upcoming)
+            const appointments = await this.appointmentRepository.findByPatientId(patientId, {});
+            const recentAppointments = appointments.filter(apt => new Date(apt.appointmentDate) <= new Date()).slice(0, 5);
+            const upcomingAppointments = appointments.filter(apt => new Date(apt.appointmentDate) > new Date()).slice(0, 5);
+            // Get prescriptions (active ones)
+            const prescriptions = await this.prescriptionRepository.findByPatientId(patientId);
+            const activePrescriptions = prescriptions.filter(prescription => !prescription.endDate || new Date(prescription.endDate) > new Date());
+            // Calculate age
+            const age = patient.dateOfBirth
+                ? Math.floor((Date.now() - new Date(patient.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+                : null;
+            // Build summary
+            const summary = {
+                patient: {
+                    id: patient.id,
+                    firstName: patient.firstName,
+                    lastName: patient.lastName,
+                    email: patient.email,
+                    phone: patient.phone,
+                    dateOfBirth: patient.dateOfBirth,
+                    age,
+                    gender: patient.gender,
+                    address: patient.address,
+                    allergies: patient.allergies,
+                    emergencyContact: patient.emergencyContact,
+                    isActive: patient.isActive
+                },
+                appointments: {
+                    total: appointments.length,
+                    recent: recentAppointments.map(apt => ({
+                        id: apt.id,
+                        date: apt.appointmentDate,
+                        status: apt.status,
+                        type: apt.type,
+                        reason: apt.reason,
+                        diagnosis: apt.diagnosis,
+                        doctorName: `Dr. ${apt.doctor?.firstName} ${apt.doctor?.lastName}` || 'Unknown'
+                    })),
+                    upcoming: upcomingAppointments.map(apt => ({
+                        id: apt.id,
+                        date: apt.appointmentDate,
+                        status: apt.status,
+                        type: apt.type,
+                        reason: apt.reason,
+                        doctorName: `Dr. ${apt.doctor?.firstName} ${apt.doctor?.lastName}` || 'Unknown'
+                    }))
+                },
+                prescriptions: {
+                    total: prescriptions.length,
+                    active: activePrescriptions.map(prescription => ({
+                        id: prescription.id,
+                        medicationName: prescription.medication?.name || 'Unknown',
+                        dosage: prescription.dosage,
+                        frequency: prescription.frequency,
+                        startDate: prescription.startDate,
+                        endDate: prescription.endDate,
+                        instructions: prescription.instructions,
+                        doctorName: `Dr. ${prescription.doctor?.firstName} ${prescription.doctor?.lastName}` || 'Unknown'
+                    }))
+                },
+                healthMetrics: {
+                    totalAppointments: appointments.length,
+                    activePrescriptions: activePrescriptions.length,
+                    lastAppointment: appointments.length > 0
+                        ? appointments.sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime())[0].appointmentDate
+                        : null,
+                    nextAppointment: upcomingAppointments.length > 0
+                        ? upcomingAppointments.sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime())[0].appointmentDate
+                        : null
+                }
+            };
+            logger_config_1.logger.info(`Patient summary retrieved for: ${patientId}`);
+            return summary;
+        }
+        catch (error) {
+            logger_config_1.logger.error('Get patient summary error:', error);
+            throw error;
+        }
+    }
 }
 exports.PatientService = PatientService;

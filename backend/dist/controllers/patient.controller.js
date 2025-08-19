@@ -122,6 +122,17 @@ class PatientController {
                 next(error);
             }
         };
+        this.getPatientSummary = async (req, res, next) => {
+            try {
+                const { id } = req.params;
+                const summary = await this.patientService.getPatientSummary(id);
+                responseHandler_1.ResponseHandler.success(res, 'Patient summary retrieved successfully', summary);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Get patient summary error:', error);
+                next(error);
+            }
+        };
     }
 }
 exports.PatientController = PatientController;

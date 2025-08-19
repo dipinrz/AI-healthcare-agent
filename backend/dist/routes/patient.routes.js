@@ -12,6 +12,7 @@ router.get('/search', auth_middleware_1.authenticateToken, (0, error_middleware_
 router.get('/stats', auth_middleware_1.authenticateToken, auth_middleware_1.requireDoctorOrAdmin, (0, error_middleware_1.asyncHandler)(patientController.getPatientStats));
 // Patient-specific routes
 router.get('/:id', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(patientController.getPatientById));
+router.get('/:id/summary', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(patientController.getPatientSummary));
 router.get('/:id/appointments', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(patientController.getPatientAppointments));
 router.get('/:id/prescriptions', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(patientController.getPatientPrescriptions));
 // Admin-only routes
