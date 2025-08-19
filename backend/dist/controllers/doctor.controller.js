@@ -161,6 +161,21 @@ class DoctorController {
                 next(error);
             }
         };
+        this.fuzzySearchByDepartment = async (req, res, next) => {
+            try {
+                const { q } = req.query;
+                if (!q) {
+                    responseHandler_1.ResponseHandler.badRequest(res, messages_1.MESSAGES.VALIDATION.SEARCH_TERM_REQUIRED || 'Search term is required');
+                    return;
+                }
+                const doctors = await this.doctorService.fuzzySearchByDepartment(q);
+                responseHandler_1.ResponseHandler.success(res, `Found ${doctors.length} doctors matching "${q}"`, doctors);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Fuzzy search by department error:', error);
+                next(error);
+            }
+        };
     }
 }
 exports.DoctorController = DoctorController;

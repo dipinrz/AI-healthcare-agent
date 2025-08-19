@@ -8,7 +8,7 @@ const statusCodes_1 = require("../constants/statusCodes");
 const authService = new auth_service_1.AuthService();
 const authenticateToken = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
+        const authHeader = req.headers['authorization'];
         const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
         if (!token) {
             res.status(statusCodes_1.HTTP_STATUS.UNAUTHORIZED).json({
@@ -18,7 +18,7 @@ const authenticateToken = async (req, res, next) => {
             return;
         }
         const decoded = authService.verifyToken(token);
-        req.user = decoded;
+        (req.user) = decoded;
         next();
     }
     catch (error) {
@@ -31,14 +31,14 @@ const authenticateToken = async (req, res, next) => {
 exports.authenticateToken = authenticateToken;
 const requireRole = (...roles) => {
     return (req, res, next) => {
-        if (!req.user) {
+        if (!(req.user)) {
             res.status(statusCodes_1.HTTP_STATUS.UNAUTHORIZED).json({
                 success: false,
                 message: messages_1.MESSAGES.ERROR.UNAUTHORIZED
             });
             return;
         }
-        if (!roles.includes(req.user.role)) {
+        if (!roles.includes((req.user).role)) {
             res.status(statusCodes_1.HTTP_STATUS.FORBIDDEN).json({
                 success: false,
                 message: messages_1.MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS

@@ -11,12 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Patient = void 0;
 const typeorm_1 = require("typeorm");
-const Appointment_1 = require("./Appointment");
-const Prescription_1 = require("./Prescription");
-const ChatLog_1 = require("./ChatLog");
-const VitalSigns_1 = require("./VitalSigns");
-const LabResult_1 = require("./LabResult");
-const MedicalDocument_1 = require("./MedicalDocument");
+const Appointment_model_1 = require("./Appointment.model");
+const Prescription_model_1 = require("./Prescription.model");
+const ChatLog_model_1 = require("./ChatLog.model");
+const VitalSigns_model_1 = require("./VitalSigns.model");
+const LabResult_model_1 = require("./LabResult.model");
+const MedicalDocument_model_1 = require("./MedicalDocument.model");
 let Patient = class Patient {
 };
 exports.Patient = Patient;
@@ -77,27 +77,27 @@ __decorate([
     __metadata("design:type", Date)
 ], Patient.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => Appointment_1.Appointment, appointment => appointment.patient),
+    (0, typeorm_1.OneToMany)(() => Appointment_model_1.Appointment, appointment => appointment.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "appointments", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => Prescription_1.Prescription, prescription => prescription.patient),
+    (0, typeorm_1.OneToMany)(() => Prescription_model_1.Prescription, prescription => prescription.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "prescriptions", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => ChatLog_1.ChatLog, chatLog => chatLog.patient),
+    (0, typeorm_1.OneToMany)(() => ChatLog_model_1.ChatLog, chatLog => chatLog.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "chatLogs", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => VitalSigns_1.VitalSigns, vitalSigns => vitalSigns.patient),
+    (0, typeorm_1.OneToMany)(() => VitalSigns_model_1.VitalSigns, vitalSigns => vitalSigns.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "vitalSigns", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => LabResult_1.LabResult, labResult => labResult.patient),
+    (0, typeorm_1.OneToMany)(() => LabResult_model_1.LabResult, labResult => labResult.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "labResults", void 0);
 __decorate([
-    (0, typeorm_1.OneToMany)(() => MedicalDocument_1.MedicalDocument, document => document.patient),
+    (0, typeorm_1.OneToMany)(() => MedicalDocument_model_1.MedicalDocument, document => document.patient),
     __metadata("design:type", Array)
 ], Patient.prototype, "medicalDocuments", void 0);
 exports.Patient = Patient = __decorate([

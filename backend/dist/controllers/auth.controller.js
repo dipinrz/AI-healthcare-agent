@@ -87,7 +87,7 @@ class AuthController {
         };
         this.getProfile = async (req, res, next) => {
             try {
-                const user = await this.authService.getUserById(req.user.userId);
+                const user = await this.authService.getUserById((req.user).userId);
                 res.json({
                     success: true,
                     message: messages_1.MESSAGES.SUCCESS.PROFILE_RETRIEVED,
@@ -116,7 +116,7 @@ class AuthController {
                     });
                     return;
                 }
-                const result = await this.authService.changePassword(req.user.userId, currentPassword, newPassword);
+                const result = await this.authService.changePassword((req.user).userId, currentPassword, newPassword);
                 res.json({
                     success: true,
                     message: result.message
@@ -189,8 +189,8 @@ class AuthController {
                 success: true,
                 message: messages_1.MESSAGES.SUCCESS.TOKEN_VALID,
                 data: {
-                    userId: req.user.userId,
-                    role: req.user.role
+                    userId: (req.user).userId,
+                    role: (req.user).role
                 }
             });
         };

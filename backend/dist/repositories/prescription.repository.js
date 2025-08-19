@@ -14,7 +14,7 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.doctor', 'doctor')
             .leftJoinAndSelect('prescription.medication', 'medication')
             .where('patient.id = :patientId', { patientId })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async findByDoctorId(doctorId) {
@@ -24,7 +24,7 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.doctor', 'doctor')
             .leftJoinAndSelect('prescription.medication', 'medication')
             .where('doctor.id = :doctorId', { doctorId })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async findByMedicationId(medicationId) {
@@ -34,7 +34,7 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.doctor', 'doctor')
             .leftJoinAndSelect('prescription.medication', 'medication')
             .where('medication.id = :medicationId', { medicationId })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async findActiveByPatientId(patientId) {
@@ -45,7 +45,7 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.medication', 'medication')
             .where('patient.id = :patientId', { patientId })
             .andWhere('prescription.status = :status', { status: 'active' })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async findByStatus(status) {
@@ -55,7 +55,7 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.doctor', 'doctor')
             .leftJoinAndSelect('prescription.medication', 'medication')
             .where('prescription.status = :status', { status })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async searchPrescriptions(searchTerm) {
@@ -64,8 +64,8 @@ class PrescriptionRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('prescription.patient', 'patient')
             .leftJoinAndSelect('prescription.doctor', 'doctor')
             .leftJoinAndSelect('prescription.medication', 'medication')
-            .where('(patient.firstName ILIKE :searchTerm OR patient.lastName ILIKE :searchTerm OR doctor.firstName ILIKE :searchTerm OR doctor.lastName ILIKE :searchTerm OR medication.name ILIKE :searchTerm OR prescription.diagnosis ILIKE :searchTerm)', { searchTerm: `%${searchTerm}%` })
-            .orderBy('prescription.prescribedDate', 'DESC')
+            .where('(patient.firstName ILIKE :searchTerm OR patient.lastName ILIKE :searchTerm OR doctor.firstName ILIKE :searchTerm OR doctor.lastName ILIKE :searchTerm OR medication.name ILIKE :searchTerm OR prescription.notes ILIKE :searchTerm)', { searchTerm: `%${searchTerm}%` })
+            .orderBy('prescription.createdAt', 'DESC')
             .getMany();
     }
     async getPrescriptionStats() {

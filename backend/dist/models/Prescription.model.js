@@ -8,13 +8,12 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b, _c;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Prescription = exports.PrescriptionStatus = void 0;
 const typeorm_1 = require("typeorm");
-const Patient_1 = require("./Patient");
-const Doctor_1 = require("./Doctor");
-const Medication_1 = require("./Medication");
+const Patient_model_1 = require("./Patient.model");
+const Doctor_model_1 = require("./Doctor.model");
+const Medication_model_1 = require("./Medication.model");
 var PrescriptionStatus;
 (function (PrescriptionStatus) {
     PrescriptionStatus["ACTIVE"] = "active";
@@ -82,16 +81,16 @@ __decorate([
     __metadata("design:type", Date)
 ], Prescription.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Patient_1.Patient, patient => patient.prescriptions),
-    __metadata("design:type", typeof (_a = typeof Patient_1.Patient !== "undefined" && Patient_1.Patient) === "function" ? _a : Object)
+    (0, typeorm_1.ManyToOne)(() => Patient_model_1.Patient, patient => patient.prescriptions),
+    __metadata("design:type", Patient_model_1.Patient)
 ], Prescription.prototype, "patient", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Doctor_1.Doctor, doctor => doctor.prescriptions),
-    __metadata("design:type", typeof (_b = typeof Doctor_1.Doctor !== "undefined" && Doctor_1.Doctor) === "function" ? _b : Object)
+    (0, typeorm_1.ManyToOne)(() => Doctor_model_1.Doctor, doctor => doctor.prescriptions),
+    __metadata("design:type", Doctor_model_1.Doctor)
 ], Prescription.prototype, "doctor", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Medication_1.Medication),
-    __metadata("design:type", typeof (_c = typeof Medication_1.Medication !== "undefined" && Medication_1.Medication) === "function" ? _c : Object)
+    (0, typeorm_1.ManyToOne)(() => Medication_model_1.Medication),
+    __metadata("design:type", Medication_model_1.Medication)
 ], Prescription.prototype, "medication", void 0);
 exports.Prescription = Prescription = __decorate([
     (0, typeorm_1.Entity)()

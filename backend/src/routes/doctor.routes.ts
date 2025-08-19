@@ -9,6 +9,7 @@ const doctorController = new DoctorController();
 // Public routes (with authentication)
 router.get('/', authenticateToken, asyncHandler(doctorController.getAllDoctors));
 router.get('/search', authenticateToken, asyncHandler(doctorController.searchDoctors));
+router.get('/search/department', authenticateToken, asyncHandler(doctorController.fuzzySearchByDepartment));
 router.get('/specializations', authenticateToken, asyncHandler(doctorController.getSpecializations));
 router.get('/departments', authenticateToken, asyncHandler(doctorController.getDepartments));
 router.get('/stats', authenticateToken, requireDoctorOrAdmin, asyncHandler(doctorController.getDoctorStats));

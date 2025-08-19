@@ -155,4 +155,41 @@ export class DoctorRepository extends BaseRepository<Doctor> {
 
     return result.map(r => r.department);
   }
+
+  async fuzzySearchByDepartment(searchTerm: string): Promise<Doctor[]> {
+    const normalizedSearch = searchTerm.toLowerCase().trim();
+    
+    return await this.repository
+      .createQueryBuilder('doctor')
+      .where('doctor.isAvailable = :isAvailable', { isAvailable: true })
+      .andWhere(
+        `(
+          LOWER(doctor.department) ILIKE :exactMatch OR
+          LOWER(doctor.department) ILIKE :startsWith OR
+          LOWER(doctor.department) ILIKE :contains OR
+          LOWER(doctor.specialization) ILIKE :exactMatch OR
+          LOWER(doctor.specialization) ILIKE :startsWith OR
+          LOWER(doctor.specialization) ILIKE :contains
+        )`,
+        {
+          exactMatch: normalizedSearch,
+          startsWith: `${normalizedSearch}%`,
+          contains: `%${normalizedSearch}%`
+        }
+      )
+      .orderBy(`
+        CASE 
+          WHEN LOWER(doctor.department) = :normalizedSearch THEN 1
+          WHEN LOWER(doctor.specialization) = :normalizedSearch THEN 2
+          WHEN LOWER(doctor.department) ILIKE :startsWith THEN 3
+          WHEN LOWER(doctor.specialization) ILIKE :startsWith THEN 4
+          WHEN LOWER(doctor.department) ILIKE :contains THEN 5
+          WHEN LOWER(doctor.specialization) ILIKE :contains THEN 6
+          ELSE 7
+        END
+      `)
+      .addOrderBy('doctor.rating', 'DESC')
+      .setParameters({ normalizedSearch, startsWith: `${normalizedSearch}%`, contains: `%${normalizedSearch}%` })
+      .getMany();
+  }
 }

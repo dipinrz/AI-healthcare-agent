@@ -9,6 +9,7 @@ const patient_routes_1 = __importDefault(require("./patient.routes"));
 const doctor_routes_1 = __importDefault(require("./doctor.routes"));
 const appointment_routes_1 = __importDefault(require("./appointment.routes"));
 const medication_routes_1 = __importDefault(require("./medication.routes"));
+const prescription_routes_1 = __importDefault(require("./prescription.routes"));
 const doctorAvailability_routes_1 = __importDefault(require("./doctorAvailability.routes"));
 const seed_routes_1 = __importDefault(require("./seed.routes"));
 // import healthRecordRoutes from './healthRecord.routes';
@@ -20,6 +21,7 @@ router.use('/patients', patient_routes_1.default);
 router.use('/doctors', doctor_routes_1.default);
 router.use('/appointments', appointment_routes_1.default);
 router.use('/medications', medication_routes_1.default);
+router.use('/prescriptions', prescription_routes_1.default);
 router.use('/doctor-availability', doctorAvailability_routes_1.default);
 router.use('/seed', seed_routes_1.default);
 // router.use('/health-records', healthRecordRoutes);
@@ -37,6 +39,7 @@ router.get('/', (req, res) => {
             doctors: '/api/doctors',
             appointments: '/api/appointments',
             medications: '/api/medications',
+            prescriptions: '/api/prescriptions',
             doctorAvailability: '/api/doctor-availability',
             seed: '/api/seed',
             // healthRecords: '/api/health-records',

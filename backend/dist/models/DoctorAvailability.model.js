@@ -8,11 +8,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DoctorAvailability = void 0;
 const typeorm_1 = require("typeorm");
-const Doctor_1 = require("./Doctor");
+const Doctor_model_1 = require("./Doctor.model");
 let DoctorAvailability = class DoctorAvailability {
 };
 exports.DoctorAvailability = DoctorAvailability;
@@ -41,8 +40,8 @@ __decorate([
     __metadata("design:type", Date)
 ], DoctorAvailability.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Doctor_1.Doctor, doctor => doctor.availabilitySlots, { onDelete: 'CASCADE' }),
-    __metadata("design:type", typeof (_a = typeof Doctor_1.Doctor !== "undefined" && Doctor_1.Doctor) === "function" ? _a : Object)
+    (0, typeorm_1.ManyToOne)(() => Doctor_model_1.Doctor, doctor => doctor.availabilitySlots, { onDelete: 'CASCADE' }),
+    __metadata("design:type", Doctor_model_1.Doctor)
 ], DoctorAvailability.prototype, "doctor", void 0);
 exports.DoctorAvailability = DoctorAvailability = __decorate([
     (0, typeorm_1.Entity)(),

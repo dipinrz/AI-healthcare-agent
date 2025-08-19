@@ -332,4 +332,20 @@ export class DoctorService {
       throw error;
     }
   }
+
+  async fuzzySearchByDepartment(searchTerm: string): Promise<Doctor[]> {
+    try {
+      if (!searchTerm || searchTerm.trim().length === 0) {
+        throw new Error('Search term is required');
+      }
+
+      const doctors = await this.doctorRepository.fuzzySearchByDepartment(searchTerm.trim());
+      
+      logger.info(`Fuzzy search by department for "${searchTerm}" returned ${doctors.length} results`);
+      return doctors;
+    } catch (error) {
+      logger.error('Fuzzy search by department error:', error);
+      throw error;
+    }
+  }
 }

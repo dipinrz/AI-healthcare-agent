@@ -8,12 +8,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = exports.UserRole = void 0;
 const typeorm_1 = require("typeorm");
-const Patient_1 = require("./Patient");
-const Doctor_1 = require("./Doctor");
+const Patient_model_1 = require("./Patient.model");
+const Doctor_model_1 = require("./Doctor.model");
 var UserRole;
 (function (UserRole) {
     UserRole["PATIENT"] = "patient";
@@ -68,14 +67,14 @@ __decorate([
     __metadata("design:type", Date)
 ], User.prototype, "updatedAt", void 0);
 __decorate([
-    (0, typeorm_1.OneToOne)(() => Patient_1.Patient, { nullable: true, cascade: true }),
+    (0, typeorm_1.OneToOne)(() => Patient_model_1.Patient, { nullable: true, cascade: true }),
     (0, typeorm_1.JoinColumn)(),
-    __metadata("design:type", typeof (_a = typeof Patient_1.Patient !== "undefined" && Patient_1.Patient) === "function" ? _a : Object)
+    __metadata("design:type", Patient_model_1.Patient)
 ], User.prototype, "patient", void 0);
 __decorate([
-    (0, typeorm_1.OneToOne)(() => Doctor_1.Doctor, { nullable: true, cascade: true }),
+    (0, typeorm_1.OneToOne)(() => Doctor_model_1.Doctor, { nullable: true, cascade: true }),
     (0, typeorm_1.JoinColumn)(),
-    __metadata("design:type", typeof (_b = typeof Doctor_1.Doctor !== "undefined" && Doctor_1.Doctor) === "function" ? _b : Object)
+    __metadata("design:type", Doctor_model_1.Doctor)
 ], User.prototype, "doctor", void 0);
 exports.User = User = __decorate([
     (0, typeorm_1.Entity)()

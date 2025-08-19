@@ -20,14 +20,14 @@ class MedicationRepository extends base_repository_1.BaseRepository {
     }
     async findByDosageForm(dosageForm) {
         return await this.findAll({
-            where: { dosageForm },
+            where: { form: dosageForm },
             order: { name: 'ASC' },
         });
     }
     async searchMedications(searchTerm) {
         return await this.repository
             .createQueryBuilder('medication')
-            .where('(medication.name ILIKE :searchTerm OR medication.description ILIKE :searchTerm OR medication.category ILIKE :searchTerm OR medication.dosageForm ILIKE :searchTerm)', { searchTerm: `%${searchTerm}%` })
+            .where('(medication.name ILIKE :searchTerm OR medication.description ILIKE :searchTerm OR medication.category ILIKE :searchTerm OR medication.form ILIKE :searchTerm)', { searchTerm: `%${searchTerm}%` })
             .orderBy('medication.name', 'ASC')
             .getMany();
     }
@@ -43,11 +43,11 @@ class MedicationRepository extends base_repository_1.BaseRepository {
     async getDosageForms() {
         const result = await this.repository
             .createQueryBuilder('medication')
-            .select('DISTINCT medication.dosageForm')
-            .where('medication.dosageForm IS NOT NULL AND medication.dosageForm != \'\'')
-            .orderBy('medication.dosageForm', 'ASC')
+            .select('DISTINCT medication.form')
+            .where('medication.form IS NOT NULL AND medication.form != \'\'')
+            .orderBy('medication.form', 'ASC')
             .getRawMany();
-        return result.map(r => r.dosageForm);
+        return result.map(r => r.form);
     }
     async isInUse(medicationId) {
         // Check if medication is referenced in prescriptions
@@ -83,11 +83,11 @@ class MedicationRepository extends base_repository_1.BaseRepository {
         }, {});
         const dosageFormStats = await this.repository
             .createQueryBuilder('medication')
-            .select('medication.dosageForm, COUNT(*) as count')
-            .groupBy('medication.dosageForm')
+            .select('medication.form, COUNT(*) as count')
+            .groupBy('medication.form')
             .getRawMany();
         const byDosageForm = dosageFormStats.reduce((acc, stat) => {
-            acc[stat.dosageForm] = parseInt(stat.count);
+            acc[stat.form] = parseInt(stat.count);
             return acc;
         }, {});
         return {

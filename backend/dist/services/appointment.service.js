@@ -130,7 +130,7 @@ class AppointmentService {
                 doctor,
                 appointmentDate,
                 reason,
-                type,
+                type: type,
                 status: Appointment_model_1.AppointmentStatus.SCHEDULED,
                 createdAt: new Date(),
                 updatedAt: new Date(),

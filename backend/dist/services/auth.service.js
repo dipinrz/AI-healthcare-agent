@@ -53,7 +53,7 @@ class AuthService {
                 const patient = await this.patientRepository.create(patientData);
                 profileId = patient.id;
                 // Link patient to user
-                await this.userRepository.update(user.id, { patientId: patient.id });
+                await this.userRepository.update(user.id, { patient });
             }
             else if (role === User_model_1.UserRole.DOCTOR) {
                 const doctorData = {
@@ -71,7 +71,7 @@ class AuthService {
                 const doctor = await this.doctorRepository.create(doctorData);
                 profileId = doctor.id;
                 // Link doctor to user
-                await this.userRepository.update(user.id, { doctorId: doctor.id });
+                await this.userRepository.update(user.id, { doctor });
             }
             // Generate JWT token
             const tokenPayload = {
@@ -116,8 +116,8 @@ class AuthService {
             const tokenPayload = {
                 userId: user.id,
                 role: user.role,
-                ...(user.patientId && { patientId: user.patientId }),
-                ...(user.doctorId && { doctorId: user.doctorId }),
+                ...(user.patient && { patientId: user.patient.id }),
+                ...(user.doctor && { doctorId: user.doctor.id }),
             };
             const token = this.generateToken(tokenPayload);
             logger_config_1.logger.info(`User logged in successfully: ${email}`);
