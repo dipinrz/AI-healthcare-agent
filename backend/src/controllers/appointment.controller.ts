@@ -314,4 +314,74 @@ export class AppointmentController {
       next(error);
     }
   };
+
+  cancelPatientAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { patientId, appointmentId } = req.params;
+      const { reason } = req.body;
+
+      const appointment = await this.appointmentService.cancelAppointment(
+        appointmentId,
+        ((req as any).user).role,
+        ((req as any).user).userId,
+        reason
+      );
+
+      ResponseHandler.success(
+        res,
+        MESSAGES.SUCCESS.APPOINTMENT_CANCELLED || 'Appointment cancelled successfully',
+        appointment
+      );
+    } catch (error) {
+      logger.error('Cancel patient appointment error:', error);
+      next(error);
+    }
+  };
+
+  reschedulePatientAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { patientId, appointmentId } = req.params;
+      const { newSlotId } = req.body;
+
+      const appointment = await this.appointmentService.rescheduleAppointment(
+        appointmentId,
+        new Date(),
+        newSlotId,
+        ((req as any).user).role,
+        ((req as any).user).userId
+      );
+
+      ResponseHandler.success(
+        res,
+        MESSAGES.SUCCESS.APPOINTMENT_RESCHEDULED || 'Appointment rescheduled successfully',
+        appointment
+      );
+    } catch (error) {
+      logger.error('Reschedule patient appointment error:', error);
+      next(error);
+    }
+  };
+
+  bookSlotAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { patientId, slotId, reason, symptoms, type } = req.body;
+
+      const appointment = await this.appointmentService.bookSlotAppointment({
+        patientId,
+        slotId: parseInt(slotId),
+        reason,
+        symptoms: symptoms || '',
+        type: type || 'consultation'
+      });
+
+      ResponseHandler.success(
+        res,
+        MESSAGES.SUCCESS.APPOINTMENT_CREATED || 'Appointment booked successfully',
+        appointment
+      );
+    } catch (error) {
+      logger.error('Book slot appointment error:', error);
+      next(error);
+    }
+  };
 }

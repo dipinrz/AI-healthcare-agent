@@ -176,6 +176,21 @@ class DoctorController {
                 next(error);
             }
         };
+        this.searchDoctorsByName = async (req, res, next) => {
+            try {
+                const { name } = req.query;
+                if (!name) {
+                    responseHandler_1.ResponseHandler.badRequest(res, messages_1.MESSAGES.VALIDATION.SEARCH_TERM_REQUIRED || 'Name is required');
+                    return;
+                }
+                const doctors = await this.doctorService.searchDoctorsByName(name);
+                responseHandler_1.ResponseHandler.success(res, `Found ${doctors.length} doctors matching "${name}"`, doctors);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Search doctors by name error:', error);
+                next(error);
+            }
+        };
     }
 }
 exports.DoctorController = DoctorController;

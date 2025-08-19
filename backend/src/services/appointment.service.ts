@@ -470,4 +470,62 @@ export class AppointmentService {
       throw error;
     }
   }
+
+  async bookSlotAppointment(data: {
+    patientId: string;
+    slotId: number;
+    reason: string;
+    symptoms?: string;
+    type?: string;
+  }) {
+    try {
+      const { patientId, slotId, reason, symptoms, type } = data;
+
+      // Verify patient exists
+      const patient = await this.patientRepository.findById(patientId);
+      if (!patient) {
+        throw new Error(MESSAGES.ERROR.PATIENT_NOT_FOUND);
+      }
+
+      // Get the slot details
+      const slot = await this.doctorAvailabilityRepository.findBySlotId(slotId);
+      if (!slot) {
+        throw new Error('Time slot not found');
+      }
+
+      if (slot.isBooked) {
+        throw new Error('This time slot is already booked');
+      }
+
+      // Verify doctor exists
+      if (!slot.doctor) {
+        throw new Error(MESSAGES.ERROR.DOCTOR_NOT_FOUND);
+      }
+
+      // Create the appointment
+      const appointmentData = {
+        patientId,
+        doctorId: slot.doctor.id,
+        appointmentDate: slot.startTime,
+        duration: 30, // Default 30 minutes
+        status: AppointmentStatus.SCHEDULED,
+        type: (type as AppointmentType) || AppointmentType.CONSULTATION,
+        reason,
+        symptoms: symptoms || '',
+      };
+
+      const appointment = await this.appointmentRepository.create(appointmentData);
+
+      // Mark the slot as booked
+      await this.doctorAvailabilityRepository.bookSlot(slotId);
+
+      logger.info(`Appointment booked successfully: ${appointment.id} for slot ${slotId}`);
+      
+      // Return appointment with basic data
+      return await this.appointmentRepository.findById(appointment.id);
+    } catch (error) {
+      logger.error('Book slot appointment error:', error);
+      throw error;
+    }
+  }
 }

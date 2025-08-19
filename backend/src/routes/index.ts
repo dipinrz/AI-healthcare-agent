@@ -20,6 +20,7 @@ router.use('/appointments', appointmentRoutes);
 router.use('/medications', medicationRoutes);
 router.use('/prescriptions', prescriptionRoutes);
 router.use('/doctor-availability', doctorAvailabilityRoutes);
+router.use('/availability', doctorAvailabilityRoutes);
 router.use('/seed', seedRoutes);
 // router.use('/health-records', healthRecordRoutes);
 // router.use('/chat', chatRoutes);

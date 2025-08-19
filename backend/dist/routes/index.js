@@ -23,6 +23,7 @@ router.use('/appointments', appointment_routes_1.default);
 router.use('/medications', medication_routes_1.default);
 router.use('/prescriptions', prescription_routes_1.default);
 router.use('/doctor-availability', doctorAvailability_routes_1.default);
+router.use('/availability', doctorAvailability_routes_1.default);
 router.use('/seed', seed_routes_1.default);
 // router.use('/health-records', healthRecordRoutes);
 // router.use('/chat', chatRoutes);

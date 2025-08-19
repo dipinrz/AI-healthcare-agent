@@ -156,5 +156,40 @@ class DoctorRepository extends base_repository_1.BaseRepository {
             .setParameters({ normalizedSearch, startsWith: `${normalizedSearch}%`, contains: `%${normalizedSearch}%` })
             .getMany();
     }
+    async searchDoctorsByName(name) {
+        const normalizedName = name.toLowerCase().trim();
+        return await this.repository
+            .createQueryBuilder('doctor')
+            .where('doctor.isAvailable = :isAvailable', { isAvailable: true })
+            .andWhere(`(
+          LOWER(doctor.firstName) ILIKE :exactMatch OR
+          LOWER(doctor.lastName) ILIKE :exactMatch OR
+          LOWER(CONCAT(doctor.firstName, ' ', doctor.lastName)) ILIKE :exactMatch OR
+          LOWER(doctor.firstName) ILIKE :startsWith OR
+          LOWER(doctor.lastName) ILIKE :startsWith OR
+          LOWER(CONCAT(doctor.firstName, ' ', doctor.lastName)) ILIKE :startsWith OR
+          LOWER(doctor.firstName) ILIKE :contains OR
+          LOWER(doctor.lastName) ILIKE :contains OR
+          LOWER(CONCAT(doctor.firstName, ' ', doctor.lastName)) ILIKE :contains
+        )`, {
+            exactMatch: normalizedName,
+            startsWith: `${normalizedName}%`,
+            contains: `%${normalizedName}%`
+        })
+            .orderBy(`
+        CASE 
+          WHEN LOWER(CONCAT(doctor.firstName, ' ', doctor.lastName)) = :normalizedName THEN 1
+          WHEN LOWER(doctor.firstName) = :normalizedName THEN 2
+          WHEN LOWER(doctor.lastName) = :normalizedName THEN 3
+          WHEN LOWER(CONCAT(doctor.firstName, ' ', doctor.lastName)) ILIKE :startsWith THEN 4
+          WHEN LOWER(doctor.firstName) ILIKE :startsWith THEN 5
+          WHEN LOWER(doctor.lastName) ILIKE :startsWith THEN 6
+          ELSE 7
+        END
+      `)
+            .addOrderBy('doctor.rating', 'DESC')
+            .setParameters({ normalizedName, startsWith: `${normalizedName}%`, contains: `%${normalizedName}%` })
+            .getMany();
+    }
 }
 exports.DoctorRepository = DoctorRepository;

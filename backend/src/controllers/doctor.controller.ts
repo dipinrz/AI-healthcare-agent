@@ -255,4 +255,26 @@ export class DoctorController {
       next(error);
     }
   };
+
+  searchDoctorsByName = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { name } = req.query;
+      
+      if (!name) {
+        ResponseHandler.badRequest(res, MESSAGES.VALIDATION.SEARCH_TERM_REQUIRED || 'Name is required');
+        return;
+      }
+
+      const doctors = await this.doctorService.searchDoctorsByName(name as string);
+
+      ResponseHandler.success(
+        res,
+        `Found ${doctors.length} doctors matching "${name}"`,
+        doctors
+      );
+    } catch (error) {
+      logger.error('Search doctors by name error:', error);
+      next(error);
+    }
+  };
 }

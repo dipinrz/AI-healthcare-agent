@@ -348,4 +348,20 @@ export class DoctorService {
       throw error;
     }
   }
+
+  async searchDoctorsByName(name: string): Promise<Doctor[]> {
+    try {
+      if (!name || name.trim().length === 0) {
+        throw new Error('Name is required');
+      }
+
+      const doctors = await this.doctorRepository.searchDoctorsByName(name.trim());
+      
+      logger.info(`Search by name for "${name}" returned ${doctors.length} results`);
+      return doctors;
+    } catch (error) {
+      logger.error('Search doctors by name error:', error);
+      throw error;
+    }
+  }
 }

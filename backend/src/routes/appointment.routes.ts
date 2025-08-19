@@ -19,6 +19,7 @@ router.get('/search', asyncHandler(appointmentController.searchAppointments));
 // Specific appointment operations
 router.get('/:id', asyncHandler(appointmentController.getAppointmentById));
 router.post('/', asyncHandler(appointmentController.createAppointment));
+router.post('/book-slot', asyncHandler(appointmentController.bookSlotAppointment));
 router.put('/:id', asyncHandler(appointmentController.updateAppointment));
 router.put('/:id/cancel', asyncHandler(appointmentController.cancelAppointment));
 router.put('/:id/reschedule', asyncHandler(appointmentController.rescheduleAppointment));
@@ -28,6 +29,8 @@ router.put('/:id/complete', requireDoctorOrAdmin, asyncHandler(appointmentContro
 
 // Patient-specific routes
 router.get('/patient/:patientId', asyncHandler(appointmentController.getPatientAppointments));
+router.put('/patient/:patientId/appointment/:appointmentId/cancel', asyncHandler(appointmentController.cancelPatientAppointment));
+router.put('/patient/:patientId/appointment/:appointmentId/reschedule', asyncHandler(appointmentController.reschedulePatientAppointment));
 
 // Doctor-specific routes
 router.get('/doctor/:doctorId', asyncHandler(appointmentController.getDoctorAppointments));

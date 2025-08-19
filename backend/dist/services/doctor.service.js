@@ -295,5 +295,19 @@ class DoctorService {
             throw error;
         }
     }
+    async searchDoctorsByName(name) {
+        try {
+            if (!name || name.trim().length === 0) {
+                throw new Error('Name is required');
+            }
+            const doctors = await this.doctorRepository.searchDoctorsByName(name.trim());
+            logger_config_1.logger.info(`Search by name for "${name}" returned ${doctors.length} results`);
+            return doctors;
+        }
+        catch (error) {
+            logger_config_1.logger.error('Search doctors by name error:', error);
+            throw error;
+        }
+    }
 }
 exports.DoctorService = DoctorService;
