@@ -504,8 +504,8 @@ export class AppointmentService {
 
       // Create the appointment
       const appointmentData = {
-        patientId,
-        doctorId: slot.doctor.id,
+        patient,
+        doctor: slot.doctor,
         appointmentDate: slot.startTime,
         duration: 30, // Default 30 minutes
         status: AppointmentStatus.SCHEDULED,
@@ -521,8 +521,10 @@ export class AppointmentService {
 
       logger.info(`Appointment booked successfully: ${appointment.id} for slot ${slotId}`);
       
-      // Return appointment with basic data
-      return await this.appointmentRepository.findById(appointment.id);
+      // Return appointment with relations
+      return await this.appointmentRepository.findById(appointment.id, {
+        relations: ['patient', 'doctor']
+      });
     } catch (error) {
       logger.error('Book slot appointment error:', error);
       throw error;
