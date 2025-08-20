@@ -15,6 +15,7 @@ router.get('/upcoming', asyncHandler(appointmentController.getUpcomingAppointmen
 router.get('/past', asyncHandler(appointmentController.getPastAppointments));
 router.get('/stats', asyncHandler(appointmentController.getAppointmentStats));
 router.get('/search', asyncHandler(appointmentController.searchAppointments));
+router.get('/available-slots/:doctorId', asyncHandler(appointmentController.getAvailableSlots));
 
 // Specific appointment operations
 router.get('/:id', asyncHandler(appointmentController.getAppointmentById));

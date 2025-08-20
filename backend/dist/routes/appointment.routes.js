@@ -14,6 +14,7 @@ router.get('/upcoming', (0, error_middleware_1.asyncHandler)(appointmentControll
 router.get('/past', (0, error_middleware_1.asyncHandler)(appointmentController.getPastAppointments));
 router.get('/stats', (0, error_middleware_1.asyncHandler)(appointmentController.getAppointmentStats));
 router.get('/search', (0, error_middleware_1.asyncHandler)(appointmentController.searchAppointments));
+router.get('/available-slots/:doctorId', (0, error_middleware_1.asyncHandler)(appointmentController.getAvailableSlots));
 // Specific appointment operations
 router.get('/:id', (0, error_middleware_1.asyncHandler)(appointmentController.getAppointmentById));
 router.post('/', (0, error_middleware_1.asyncHandler)(appointmentController.createAppointment));

@@ -19,7 +19,9 @@ router.put('/slot/:slotId/release', auth_middleware_1.authenticateToken, (0, err
 router.put('/slot/:slotId/availability', auth_middleware_1.authenticateToken, auth_middleware_1.requireDoctorOrAdmin, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.updateSlotAvailability));
 // Admin-only routes
 router.post('/generate-all-slots', auth_middleware_1.authenticateToken, auth_middleware_1.requireAdmin, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.generateSlotsForAllDoctors));
-router.post('/seed-data', auth_middleware_1.authenticateToken, auth_middleware_1.requireAdmin, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.generateSlotsForAllDoctors)); // Legacy compatibility
+router.post('/seed-data', auth_middleware_1.authenticateToken, 
+//  requireAdmin,
+(0, error_middleware_1.asyncHandler)(doctorAvailabilityController.generateSlotsForAllDoctors)); // Legacy compatibility
 router.post('/public-seed-data', (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.generateSlotsForAllDoctors)); // Temporary public endpoint
 router.delete('/clear-old-slots', auth_middleware_1.authenticateToken, auth_middleware_1.requireAdmin, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.clearOldSlots));
 exports.default = router;

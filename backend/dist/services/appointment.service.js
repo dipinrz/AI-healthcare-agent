@@ -373,5 +373,47 @@ class AppointmentService {
             throw error;
         }
     }
+    async getAvailableSlots(doctorId, date) {
+        try {
+            // Verify doctor exists
+            const doctor = await this.doctorRepository.findById(doctorId);
+            if (!doctor) {
+                throw new Error(messages_1.MESSAGES.ERROR.DOCTOR_NOT_FOUND);
+            }
+            // Parse the date
+            const targetDate = new Date(date);
+            if (isNaN(targetDate.getTime())) {
+                throw new Error('Invalid date format');
+            }
+            // Get available slots for the doctor on the specific date
+            // Create start and end of the target date
+            const startOfDay = new Date(targetDate);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(targetDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            const slots = await this.doctorAvailabilityRepository.findAvailableSlots(startOfDay.toISOString(), endOfDay.toISOString(), doctorId);
+            // Filter out booked slots and return in the expected format
+            const availableSlots = slots
+                .filter(slot => !slot.isBooked)
+                .map(slot => ({
+                slotId: slot.slotId,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                is_booked: slot.isBooked,
+                doctor: {
+                    id: slot.doctor?.id,
+                    firstName: slot.doctor?.firstName,
+                    lastName: slot.doctor?.lastName,
+                    specialization: slot.doctor?.specialization
+                }
+            }));
+            logger_config_1.logger.info(`Retrieved ${availableSlots.length} available slots for doctor ${doctorId} on ${date}`);
+            return availableSlots;
+        }
+        catch (error) {
+            logger_config_1.logger.error('Get available slots error:', error);
+            throw error;
+        }
+    }
 }
 exports.AppointmentService = AppointmentService;

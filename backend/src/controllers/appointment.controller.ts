@@ -384,4 +384,30 @@ export class AppointmentController {
       next(error);
     }
   };
+
+  getAvailableSlots = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { doctorId } = req.params;
+      const { date } = req.query;
+
+      if (!date) {
+        ResponseHandler.badRequest(res, 'Date parameter is required');
+        return;
+      }
+
+      const slots = await this.appointmentService.getAvailableSlots(doctorId, date as string);
+
+      ResponseHandler.success(
+        res,
+        'Available slots retrieved successfully',
+        {
+          success: true,
+          data: slots
+        }
+      );
+    } catch (error) {
+      logger.error('Get available slots error:', error);
+      next(error);
+    }
+  };
 }
