@@ -47,14 +47,15 @@ const Prescription_1 = require("../entities/Prescription");
 const VitalSigns_1 = require("../entities/VitalSigns");
 const LabResult_1 = require("../entities/LabResult");
 const MedicalDocument_1 = require("../entities/MedicalDocument");
+const DoctorAvailability_1 = require("../entities/DoctorAvailability");
 // Database configuration based on environment
 const isProduction = process.env.NODE_ENV === 'production';
 const databaseUrl = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_OeyXpbqB6Dz4@ep-square-unit-ad3tr6wu-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     url: databaseUrl,
-    synchronize: !isProduction, // Only use in development, disable in production
-    logging: !isProduction, // Disable logging in production for performance
+    synchronize: true, // Only use in development, disable in production
+    logging: false, // Disable logging in production for performance
     ssl: databaseUrl.includes('neon.tech') || databaseUrl.includes('amazonaws.com'), // SSL for cloud providers
     entities: [
         User_1.User,
@@ -67,6 +68,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
         VitalSigns_1.VitalSigns,
         LabResult_1.LabResult,
         MedicalDocument_1.MedicalDocument,
+        DoctorAvailability_1.DoctorAvailability
     ],
     migrations: [],
     subscribers: [],
