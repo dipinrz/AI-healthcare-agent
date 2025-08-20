@@ -537,6 +537,8 @@ export class AppointmentService {
         throw new Error(MESSAGES.ERROR.DOCTOR_NOT_FOUND);
       }
 
+      console.log(`Looking for slots for doctor: ${doctorId} on date: ${date}`);
+
       // Parse the date
       const targetDate = new Date(date);
       if (isNaN(targetDate.getTime())) {
@@ -550,11 +552,25 @@ export class AppointmentService {
       const endOfDay = new Date(targetDate);
       endOfDay.setHours(23, 59, 59, 999);
 
+      console.log(`Date range: ${startOfDay.toISOString()} to ${endOfDay.toISOString()}`);
+
+      // First, check if there are ANY slots for this doctor
+      const allSlotsForDoctor = await this.doctorAvailabilityRepository.findAvailableSlots(
+        undefined, 
+        undefined,
+        doctorId
+      );
+      console.log(`Total slots for doctor ${doctorId}: ${allSlotsForDoctor.length}`);
+
+      // Now get slots for the specific date
       const slots = await this.doctorAvailabilityRepository.findAvailableSlots(
         startOfDay.toISOString(), 
         endOfDay.toISOString(),
         doctorId
       );
+
+      console.log(`Slots found for date range:`, slots.length);
+      console.log('First few slots:', slots.slice(0, 3));
 
       // Filter out booked slots and return in the expected format
       const availableSlots = slots
@@ -572,6 +588,7 @@ export class AppointmentService {
           }
         }));
 
+      console.log(`Final available slots: ${availableSlots.length}`);
       logger.info(`Retrieved ${availableSlots.length} available slots for doctor ${doctorId} on ${date}`);
       return availableSlots;
     } catch (error) {

@@ -32,11 +32,15 @@ class DoctorAvailabilityRepository extends base_repository_1.BaseRepository {
         const query = this.repository
             .createQueryBuilder('availability')
             .leftJoinAndSelect('availability.doctor', 'doctor')
-            .where('availability.isBooked = :isBooked', { isBooked: false })
-            .andWhere('availability.startTime > :now', { now: new Date() });
+            .where('availability.isBooked = :isBooked', { isBooked: false });
+        // Add date range filtering if provided
         if (startTime && endTime) {
-            query.andWhere('availability.startTime = :startTime', { startTime });
-            query.andWhere('availability.endTime = :endTime', { endTime });
+            query.andWhere('availability.startTime >= :startTime', { startTime });
+            query.andWhere('availability.startTime <= :endTime', { endTime });
+        }
+        else {
+            // Only show future slots if no specific date range is provided
+            query.andWhere('availability.startTime > :now', { now: new Date() });
         }
         if (doctorId) {
             query.andWhere('doctor.id = :doctorId', { doctorId });
