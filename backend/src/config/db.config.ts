@@ -14,7 +14,8 @@ import { DoctorAvailability } from '../models/DoctorAvailability.model';
 
 // Database configuration based on environment
 const isProduction = config.NODE_ENV === 'production';
-const databaseUrl = process.env.DATABASE_URL || 
+const databaseUrl = process.env.DATABASE_URL 
+|| 
   `postgresql://${config.DB_USERNAME}:${config.DB_PASSWORD}@${config.DB_HOST}:${config.DB_PORT}/${config.DB_NAME}`;
 
 export const AppDataSource = new DataSource({

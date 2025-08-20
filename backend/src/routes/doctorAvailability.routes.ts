@@ -11,7 +11,7 @@ router.get('/available-doctors', authenticateToken, asyncHandler(doctorAvailabil
 router.get('/stats', authenticateToken, asyncHandler(doctorAvailabilityController.getAvailabilityStats));
 
 // Doctor-specific routes
-router.get('/doctor/:doctorId/slots', authenticateToken, asyncHandler(doctorAvailabilityController.getDoctorSlots));
+router.get('/doctor/:doctorId/slots', asyncHandler(doctorAvailabilityController.getDoctorSlots));
 router.post('/doctor/:doctorId/generate-slots', authenticateToken, requireDoctorOrAdmin, asyncHandler(doctorAvailabilityController.generateSlotsForDoctor));
 
 // Slot management
