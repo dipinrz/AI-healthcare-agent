@@ -1,0 +1,330 @@
+{
+  "info": {
+    "name": "AI Healthcare - Test Notifications",
+    "description": "Test notification endpoints for appointment reminders",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{auth_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3001/api",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"patient@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notification Settings",
+      "item": [
+        {
+          "name": "Get Notification Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/notification-settings",
+              "host": ["{{base_url}}"],
+              "path": ["notification-settings"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enable Notifications",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notification-settings/enable",
+              "host": ["{{base_url}}"],
+              "path": ["notification-settings", "enable"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Notification Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notificationsEnabled\": true,\n  \"reminder24h\": true,\n  \"reminder1h\": true,\n  \"appointmentConfirmed\": true,\n  \"appointmentCancelled\": true,\n  \"appointmentRescheduled\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/notification-settings",
+              "host": ["{{base_url}}"],
+              "path": ["notification-settings"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Test Notifications",
+      "item": [
+        {
+          "name": "Get Available Notification Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/test-notifications/types",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "types"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send General Test Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"general\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send 24h Reminder Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"reminder_24h\",\n  \"doctorName\": \"Dr. Johnson\",\n  \"appointmentDate\": \"Tomorrow\",\n  \"appointmentTime\": \"2:00 PM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send 1h Reminder Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"reminder_1h\",\n  \"doctorName\": \"Dr. Smith\",\n  \"appointmentDate\": \"Today\",\n  \"appointmentTime\": \"3:30 PM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Appointment Confirmed Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"confirmed\",\n  \"doctorName\": \"Dr. Martinez\",\n  \"appointmentDate\": \"December 25th\",\n  \"appointmentTime\": \"10:30 AM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Appointment Cancelled Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"cancelled\",\n  \"doctorName\": \"Dr. Wilson\",\n  \"appointmentDate\": \"December 24th\",\n  \"appointmentTime\": \"3:15 PM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Appointment Rescheduled Test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"rescheduled\",\n  \"doctorName\": \"Dr. Brown\",\n  \"appointmentDate\": \"December 26th\",\n  \"appointmentTime\": \"11:00 AM\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/test-notifications/send",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "send"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Test All Notification Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{auth_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/test-notifications/test-settings",
+              "host": ["{{base_url}}"],
+              "path": ["test-notifications", "test-settings"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

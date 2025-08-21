@@ -24,8 +24,7 @@ export class AppointmentController {
         filters,
         parseInt(page as string),
         parseInt(limit as string),
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.paginated(
@@ -47,8 +46,7 @@ export class AppointmentController {
       const { id } = req.params;
       const appointment = await this.appointmentService.getAppointmentById(
         id,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -89,8 +87,7 @@ export class AppointmentController {
       const appointment = await this.appointmentService.updateAppointment(
         id,
         updateData,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -112,8 +109,7 @@ export class AppointmentController {
       const appointment = await this.appointmentService.cancelAppointment(
         id,
         reason,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -130,19 +126,17 @@ export class AppointmentController {
   rescheduleAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { id } = req.params;
-      const { newDate, newTime, slotId } = req.body;
+      const { slotId } = req.body;
       
-      if (!newDate || !newTime) {
-        ResponseHandler.badRequest(res, MESSAGES.VALIDATION.NEW_DATE_TIME_REQUIRED || 'New date and time are required');
+      if (!slotId) {
+        ResponseHandler.badRequest(res, 'Slot ID is required for rescheduling');
         return;
       }
 
       const appointment = await this.appointmentService.rescheduleAppointment(
         id,
-        new Date(`${newDate}T${newTime}`),
-        slotId,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        parseInt(slotId),
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -168,8 +162,7 @@ export class AppointmentController {
           notes,
           prescriptions,
         },
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -188,8 +181,7 @@ export class AppointmentController {
       const { limit = 10 } = req.query;
       
       const appointments = await this.appointmentService.getUpcomingAppointments(
-        ((req as any).user).role,
-        ((req as any).user).userId,
+        ((req as any).user),
         parseInt(limit as string)
       );
 
@@ -209,8 +201,7 @@ export class AppointmentController {
       const { limit = 10 } = req.query;
       
       const appointments = await this.appointmentService.getPastAppointments(
-        ((req as any).user).role,
-        ((req as any).user).userId,
+        ((req as any).user),
         parseInt(limit as string)
       );
 
@@ -228,8 +219,7 @@ export class AppointmentController {
   getAppointmentStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const stats = await this.appointmentService.getAppointmentStats(
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -254,8 +244,7 @@ export class AppointmentController {
 
       const appointments = await this.appointmentService.searchAppointments(
         q as string,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -322,9 +311,8 @@ export class AppointmentController {
 
       const appointment = await this.appointmentService.cancelAppointment(
         appointmentId,
-        ((req as any).user).role,
-        ((req as any).user).userId,
-        reason
+        reason,
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -343,12 +331,15 @@ export class AppointmentController {
       const { patientId, appointmentId } = req.params;
       const { newSlotId } = req.body;
 
+      if (!newSlotId) {
+        ResponseHandler.badRequest(res, 'New slot ID is required');
+        return;
+      }
+
       const appointment = await this.appointmentService.rescheduleAppointment(
         appointmentId,
-        new Date(),
-        newSlotId,
-        ((req as any).user).role,
-        ((req as any).user).userId
+        parseInt(newSlotId),
+        ((req as any).user)
       );
 
       ResponseHandler.success(
@@ -374,9 +365,9 @@ export class AppointmentController {
         type: type || 'consultation'
       });
 
-      ResponseHandler.success(
+      ResponseHandler.created(
         res,
-        MESSAGES.SUCCESS.APPOINTMENT_CREATED || 'Appointment booked successfully',
+        'Appointment booked successfully using slot',
         appointment
       );
     } catch (error) {
@@ -400,10 +391,7 @@ export class AppointmentController {
       ResponseHandler.success(
         res,
         'Available slots retrieved successfully',
-        {
-          success: true,
-          data: slots
-        }
+        slots
       );
     } catch (error) {
       logger.error('Get available slots error:', error);

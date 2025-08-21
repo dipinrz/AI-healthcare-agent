@@ -19,7 +19,7 @@ class AppointmentController {
                     endDate: endDate ? new Date(endDate) : undefined,
                     type: type,
                 };
-                const result = await this.appointmentService.getAllAppointments(filters, parseInt(page), parseInt(limit), (req.user).role, (req.user).userId);
+                const result = await this.appointmentService.getAllAppointments(filters, parseInt(page), parseInt(limit), (req.user));
                 responseHandler_1.ResponseHandler.paginated(res, messages_1.MESSAGES.SUCCESS.APPOINTMENTS_RETRIEVED || 'Appointments retrieved successfully', result.data, result.total, result.page, result.limit);
             }
             catch (error) {
@@ -30,7 +30,7 @@ class AppointmentController {
         this.getAppointmentById = async (req, res, next) => {
             try {
                 const { id } = req.params;
-                const appointment = await this.appointmentService.getAppointmentById(id, (req.user).role, (req.user).userId);
+                const appointment = await this.appointmentService.getAppointmentById(id, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_RETRIEVED || 'Appointment retrieved successfully', appointment);
             }
             catch (error) {
@@ -53,7 +53,7 @@ class AppointmentController {
             try {
                 const { id } = req.params;
                 const updateData = req.body;
-                const appointment = await this.appointmentService.updateAppointment(id, updateData, (req.user).role, (req.user).userId);
+                const appointment = await this.appointmentService.updateAppointment(id, updateData, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_UPDATED, appointment);
             }
             catch (error) {
@@ -65,7 +65,7 @@ class AppointmentController {
             try {
                 const { id } = req.params;
                 const { reason } = req.body;
-                const appointment = await this.appointmentService.cancelAppointment(id, reason, (req.user).role, (req.user).userId);
+                const appointment = await this.appointmentService.cancelAppointment(id, reason, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_CANCELLED, appointment);
             }
             catch (error) {
@@ -76,12 +76,12 @@ class AppointmentController {
         this.rescheduleAppointment = async (req, res, next) => {
             try {
                 const { id } = req.params;
-                const { newDate, newTime, slotId } = req.body;
-                if (!newDate || !newTime) {
-                    responseHandler_1.ResponseHandler.badRequest(res, messages_1.MESSAGES.VALIDATION.NEW_DATE_TIME_REQUIRED || 'New date and time are required');
+                const { slotId } = req.body;
+                if (!slotId) {
+                    responseHandler_1.ResponseHandler.badRequest(res, 'Slot ID is required for rescheduling');
                     return;
                 }
-                const appointment = await this.appointmentService.rescheduleAppointment(id, new Date(`${newDate}T${newTime}`), slotId, (req.user).role, (req.user).userId);
+                const appointment = await this.appointmentService.rescheduleAppointment(id, parseInt(slotId), (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_RESCHEDULED, appointment);
             }
             catch (error) {
@@ -97,7 +97,7 @@ class AppointmentController {
                     diagnosis,
                     notes,
                     prescriptions,
-                }, (req.user).role, (req.user).userId);
+                }, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_COMPLETED, appointment);
             }
             catch (error) {
@@ -108,7 +108,7 @@ class AppointmentController {
         this.getUpcomingAppointments = async (req, res, next) => {
             try {
                 const { limit = 10 } = req.query;
-                const appointments = await this.appointmentService.getUpcomingAppointments((req.user).role, (req.user).userId, parseInt(limit));
+                const appointments = await this.appointmentService.getUpcomingAppointments((req.user), parseInt(limit));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.UPCOMING_APPOINTMENTS_RETRIEVED || 'Upcoming appointments retrieved successfully', appointments);
             }
             catch (error) {
@@ -119,7 +119,7 @@ class AppointmentController {
         this.getPastAppointments = async (req, res, next) => {
             try {
                 const { limit = 10 } = req.query;
-                const appointments = await this.appointmentService.getPastAppointments((req.user).role, (req.user).userId, parseInt(limit));
+                const appointments = await this.appointmentService.getPastAppointments((req.user), parseInt(limit));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.PAST_APPOINTMENTS_RETRIEVED || 'Past appointments retrieved successfully', appointments);
             }
             catch (error) {
@@ -129,7 +129,7 @@ class AppointmentController {
         };
         this.getAppointmentStats = async (req, res, next) => {
             try {
-                const stats = await this.appointmentService.getAppointmentStats((req.user).role, (req.user).userId);
+                const stats = await this.appointmentService.getAppointmentStats((req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.STATS_RETRIEVED || 'Appointment statistics retrieved successfully', stats);
             }
             catch (error) {
@@ -144,7 +144,7 @@ class AppointmentController {
                     responseHandler_1.ResponseHandler.badRequest(res, messages_1.MESSAGES.VALIDATION.SEARCH_TERM_REQUIRED || 'Search term is required');
                     return;
                 }
-                const appointments = await this.appointmentService.searchAppointments(q, (req.user).role, (req.user).userId);
+                const appointments = await this.appointmentService.searchAppointments(q, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.SEARCH_COMPLETED || 'Search completed successfully', appointments);
             }
             catch (error) {
@@ -190,7 +190,7 @@ class AppointmentController {
             try {
                 const { patientId, appointmentId } = req.params;
                 const { reason } = req.body;
-                const appointment = await this.appointmentService.cancelAppointment(appointmentId, (req.user).role, (req.user).userId, reason);
+                const appointment = await this.appointmentService.cancelAppointment(appointmentId, reason, (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_CANCELLED || 'Appointment cancelled successfully', appointment);
             }
             catch (error) {
@@ -202,7 +202,11 @@ class AppointmentController {
             try {
                 const { patientId, appointmentId } = req.params;
                 const { newSlotId } = req.body;
-                const appointment = await this.appointmentService.rescheduleAppointment(appointmentId, new Date(), newSlotId, (req.user).role, (req.user).userId);
+                if (!newSlotId) {
+                    responseHandler_1.ResponseHandler.badRequest(res, 'New slot ID is required');
+                    return;
+                }
+                const appointment = await this.appointmentService.rescheduleAppointment(appointmentId, parseInt(newSlotId), (req.user));
                 responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_RESCHEDULED || 'Appointment rescheduled successfully', appointment);
             }
             catch (error) {
@@ -220,7 +224,7 @@ class AppointmentController {
                     symptoms: symptoms || '',
                     type: type || 'consultation'
                 });
-                responseHandler_1.ResponseHandler.success(res, messages_1.MESSAGES.SUCCESS.APPOINTMENT_CREATED || 'Appointment booked successfully', appointment);
+                responseHandler_1.ResponseHandler.created(res, 'Appointment booked successfully using slot', appointment);
             }
             catch (error) {
                 logger_config_1.logger.error('Book slot appointment error:', error);
@@ -236,10 +240,7 @@ class AppointmentController {
                     return;
                 }
                 const slots = await this.appointmentService.getAvailableSlots(doctorId, date);
-                responseHandler_1.ResponseHandler.success(res, 'Available slots retrieved successfully', {
-                    success: true,
-                    data: slots
-                });
+                responseHandler_1.ResponseHandler.success(res, 'Available slots retrieved successfully', slots);
             }
             catch (error) {
                 logger_config_1.logger.error('Get available slots error:', error);

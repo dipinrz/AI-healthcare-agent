@@ -11,6 +11,8 @@ const appointment_routes_1 = __importDefault(require("./appointment.routes"));
 const medication_routes_1 = __importDefault(require("./medication.routes"));
 const prescription_routes_1 = __importDefault(require("./prescription.routes"));
 const doctorAvailability_routes_1 = __importDefault(require("./doctorAvailability.routes"));
+const notificationSetting_routes_1 = __importDefault(require("./notificationSetting.routes"));
+const testNotification_routes_1 = __importDefault(require("./testNotification.routes"));
 const seed_routes_1 = __importDefault(require("./seed.routes"));
 // import healthRecordRoutes from './healthRecord.routes';
 // import chatRoutes from './chat.routes';
@@ -24,6 +26,8 @@ router.use('/medications', medication_routes_1.default);
 router.use('/prescriptions', prescription_routes_1.default);
 router.use('/doctor-availability', doctorAvailability_routes_1.default);
 router.use('/availability', doctorAvailability_routes_1.default);
+router.use('/notification-settings', notificationSetting_routes_1.default);
+router.use('/test-notifications', testNotification_routes_1.default);
 router.use('/seed', seed_routes_1.default);
 // router.use('/health-records', healthRecordRoutes);
 // router.use('/chat', chatRoutes);
@@ -42,6 +46,8 @@ router.get('/', (req, res) => {
             medications: '/api/medications',
             prescriptions: '/api/prescriptions',
             doctorAvailability: '/api/doctor-availability',
+            notificationSettings: '/api/notification-settings',
+            testNotifications: '/api/test-notifications',
             seed: '/api/seed',
             // healthRecords: '/api/health-records',
             // chat: '/api/chat',

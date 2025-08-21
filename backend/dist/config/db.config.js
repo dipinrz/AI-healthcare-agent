@@ -14,10 +14,13 @@ const VitalSigns_model_1 = require("../models/VitalSigns.model");
 const LabResult_model_1 = require("../models/LabResult.model");
 const MedicalDocument_model_1 = require("../models/MedicalDocument.model");
 const DoctorAvailability_model_1 = require("../models/DoctorAvailability.model");
+const NotificationSetting_model_1 = require("../models/NotificationSetting.model");
+const NotificationLog_model_1 = require("../models/NotificationLog.model");
 // Database configuration based on environment
 const isProduction = index_1.config.NODE_ENV === 'production';
-const databaseUrl = process.env.DATABASE_URL ||
-    `postgresql://${index_1.config.DB_USERNAME}:${index_1.config.DB_PASSWORD}@${index_1.config.DB_HOST}:${index_1.config.DB_PORT}/${index_1.config.DB_NAME}`;
+const databaseUrl = process.env.DATABASE_URL
+    ||
+        `postgresql://${index_1.config.DB_USERNAME}:${index_1.config.DB_PASSWORD}@${index_1.config.DB_HOST}:${index_1.config.DB_PORT}/${index_1.config.DB_NAME}`;
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     url: databaseUrl,
@@ -37,7 +40,9 @@ exports.AppDataSource = new typeorm_1.DataSource({
         VitalSigns_model_1.VitalSigns,
         LabResult_model_1.LabResult,
         MedicalDocument_model_1.MedicalDocument,
-        DoctorAvailability_model_1.DoctorAvailability
+        DoctorAvailability_model_1.DoctorAvailability,
+        NotificationSetting_model_1.NotificationSetting,
+        NotificationLog_model_1.NotificationLog
     ],
     migrations: ['src/migrations/*.ts'],
     subscribers: ['src/subscribers/*.ts'],

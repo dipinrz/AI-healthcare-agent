@@ -32,6 +32,7 @@ import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import appointmentService from '../../services/appointmentService';
+import { useAuth } from '../../context/AuthContext';
 
 // Define interfaces locally to avoid import issues
 interface Doctor {
@@ -47,18 +48,13 @@ interface Doctor {
 }
 
 interface AvailableSlot {
+  slotId: number;
   time: Date;
   displayTime: string;
+  startTime: Date;
+  endTime: Date;
 }
 
-interface CreateAppointmentData {
-  doctorId: string;
-  appointmentDate: string | Date;
-  duration?: number;
-  type?: 'consultation' | 'follow_up' | 'emergency' | 'routine_checkup';
-  reason: string;
-  symptoms?: string;
-}
 
 interface BookingModalProps {
   open: boolean;
@@ -73,6 +69,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   onSuccess,
   preselectedDoctorId
 }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState(1);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
@@ -144,7 +141,12 @@ const BookingModal: React.FC<BookingModalProps> = ({
 
     setLoadingSlots(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      // Format date in local timezone to avoid timezone conversion issues
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
       const response = await appointmentService.getAvailableSlots(selectedDoctor.id, dateStr);
       
       if (response.success && response.data) {
@@ -177,7 +179,7 @@ const BookingModal: React.FC<BookingModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (!selectedDoctor || !selectedSlot || !formData.reason) {
+    if (!selectedDoctor || !selectedSlot || !formData.reason || !user?.patient) {
       setError('Please fill in all required fields');
       return;
     }
@@ -186,16 +188,15 @@ const BookingModal: React.FC<BookingModalProps> = ({
     setError('');
 
     try {
-      const appointmentData: CreateAppointmentData = {
-        doctorId: selectedDoctor.id,
-        appointmentDate: selectedSlot.time,
-        duration: formData.duration,
-        type: formData.type,
+      const bookingData = {
+        patientId: user.patient.id,
+        slotId: selectedSlot.slotId,
         reason: formData.reason,
-        symptoms: formData.symptoms || undefined
+        symptoms: formData.symptoms || '',
+        type: formData.type
       };
 
-      const response = await appointmentService.createAppointment(appointmentData);
+      const response = await appointmentService.bookSlotAppointment(bookingData);
       
       if (response.success) {
         onSuccess();
@@ -464,6 +465,23 @@ const BookingModal: React.FC<BookingModalProps> = ({
       )}
     </Box>
   );
+
+  // Check if user is a patient
+  if (!user || user.role !== 'patient' || !user.patient) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Access Denied</DialogTitle>
+        <DialogContent>
+          <Alert severity="error">
+            Only patients can book appointments. Please log in as a patient.
+          </Alert>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Close</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>

@@ -34,7 +34,8 @@ import {
   Cancel as CancelIcon,
   AccessTime as ClockTimeIcon,
   VideoCall as VideoCallIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Person as PersonIcon
 } from '@mui/icons-material';
 import appointmentService from '../services/appointmentService';
 import BookingModal from '../components/appointments/BookingModal';
@@ -90,6 +91,8 @@ const Appointments: React.FC = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -102,6 +105,7 @@ const Appointments: React.FC = () => {
 
   useEffect(() => {
     loadAppointments();
+    loadStats();
   }, []);
 
   const loadAppointments = async () => {
@@ -122,6 +126,17 @@ const Appointments: React.FC = () => {
     }
   };
 
+  const loadStats = async () => {
+    try {
+      const response = await appointmentService.getAppointmentStats();
+      if (response.success && response.data) {
+        setStats(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
+
   const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' | 'warning') => {
     setSnackbar({ open: true, message, severity });
   };
@@ -130,25 +145,58 @@ const Appointments: React.FC = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  useEffect(() => {
-    let filtered = appointments;
-
-    // Filter by status
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(apt => apt.status === filterStatus);
+  const handleSearch = async (term: string) => {
+    if (!term.trim()) {
+      setFilteredAppointments(appointments);
+      return;
     }
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = filtered.filter(apt => 
-        apt.doctor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        apt.doctor.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        apt.doctor.specialization.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        apt.reason.toLowerCase().includes(searchTerm.toLowerCase())
+    setSearchLoading(true);
+    try {
+      const response = await appointmentService.searchAppointments(term);
+      if (response.success && response.data) {
+        const searchResults = Array.isArray(response.data) ? response.data : [response.data];
+        setFilteredAppointments(searchResults);
+      } else {
+        showSnackbar('Search failed', 'error');
+        // Fallback to local search
+        const filtered = appointments.filter(apt => 
+          apt.doctor.firstName.toLowerCase().includes(term.toLowerCase()) ||
+          apt.doctor.lastName.toLowerCase().includes(term.toLowerCase()) ||
+          apt.doctor.specialization.toLowerCase().includes(term.toLowerCase()) ||
+          apt.reason.toLowerCase().includes(term.toLowerCase())
+        );
+        setFilteredAppointments(filtered);
+      }
+    } catch (error) {
+      // Fallback to local search on error
+      const filtered = appointments.filter(apt => 
+        apt.doctor.firstName.toLowerCase().includes(term.toLowerCase()) ||
+        apt.doctor.lastName.toLowerCase().includes(term.toLowerCase()) ||
+        apt.doctor.specialization.toLowerCase().includes(term.toLowerCase()) ||
+        apt.reason.toLowerCase().includes(term.toLowerCase())
       );
+      setFilteredAppointments(filtered);
+    } finally {
+      setSearchLoading(false);
     }
+  };
 
-    setFilteredAppointments(filtered);
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      // Debounce search
+      const timeoutId = setTimeout(() => {
+        handleSearch(searchTerm);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Apply status filter when no search term
+      let filtered = appointments;
+      if (filterStatus !== 'all') {
+        filtered = filtered.filter(apt => apt.status === filterStatus);
+      }
+      setFilteredAppointments(filtered);
+    }
   }, [appointments, filterStatus, searchTerm]);
 
   const handleReschedule = (appointment: Appointment) => {
@@ -170,6 +218,7 @@ const Appointments: React.FC = () => {
       if (response.success) {
         showSnackbar('Appointment cancelled successfully', 'success');
         loadAppointments();
+        loadStats();
       } else {
         showSnackbar(response.message || 'Failed to cancel appointment', 'error');
       }
@@ -185,11 +234,13 @@ const Appointments: React.FC = () => {
   const handleBookingSuccess = () => {
     showSnackbar('Appointment booked successfully!', 'success');
     loadAppointments();
+    loadStats();
   };
 
   const handleRescheduleSuccess = () => {
     showSnackbar('Appointment rescheduled successfully!', 'success');
     loadAppointments();
+    loadStats();
   };
 
   const getStatusIcon = (status: string) => {
@@ -256,7 +307,7 @@ const Appointments: React.FC = () => {
 
         {/* Quick Stats */}
         <Grid container spacing={3}>
-          <Grid size={{xs: 12, md: 4}}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -268,7 +319,7 @@ const Appointments: React.FC = () => {
                       Upcoming
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {upcomingAppointments.length}
+                      {stats?.upcoming || upcomingAppointments.length}
                     </Typography>
                   </Box>
                 </Box>
@@ -276,7 +327,7 @@ const Appointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid size={{xs: 12, md: 4}}>
+          <Grid size={{xs: 12, md: 3}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -288,7 +339,7 @@ const Appointments: React.FC = () => {
                       Completed
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {appointments.filter(apt => apt.status === 'completed').length}
+                      {stats?.completed || appointments.filter(apt => apt.status === 'completed').length}
                     </Typography>
                   </Box>
                 </Box>
@@ -296,7 +347,27 @@ const Appointments: React.FC = () => {
             </Card>
           </Grid>
           
-          <Grid size={{xs: 12, md: 4}}>
+          <Grid size={{xs: 12, md: 3}}>
+            <Card>
+              <CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar sx={{ bgcolor: 'error.main', mr: 2 }}>
+                    <CancelIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary">
+                      Cancelled
+                    </Typography>
+                    <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
+                      {stats?.cancelled || appointments.filter(apt => apt.status === 'cancelled').length}
+                    </Typography>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          
+          <Grid size={{xs: 12, md: 3}}>
             <Card>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -308,7 +379,7 @@ const Appointments: React.FC = () => {
                       Total
                     </Typography>
                     <Typography variant="h4" sx={{ fontWeight: 'bold' }}>
-                      {appointments.length}
+                      {stats?.total || appointments.length}
                     </Typography>
                   </Box>
                 </Box>
@@ -323,14 +394,18 @@ const Appointments: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
               <TextField
                 fullWidth
-                placeholder="Search appointments..."
+                placeholder="Search by doctor name, specialization, or reason..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 size="small"
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon color="action" />
+                      {searchLoading ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <SearchIcon color="action" />
+                      )}
                     </InputAdornment>
                   ),
                 }}
@@ -402,12 +477,20 @@ const Appointments: React.FC = () => {
 
                         <Grid container spacing={3}>
                           <Grid size={{xs: 12, md: 6}}>
-                            <Typography variant="h6" sx={{ mb: 1 }}>
-                              Dr. {appointment.doctor.firstName} {appointment.doctor.lastName}
-                            </Typography>
-                            <Typography variant="body1" color="primary" sx={{ fontWeight: 500, mb: 1 }}>
-                              {appointment.doctor.specialization}
-                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                              <Avatar sx={{ bgcolor: 'primary.main', width: 40, height: 40 }}>
+                                <PersonIcon />
+                              </Avatar>
+                              <Box>
+                                <Typography variant="h6" sx={{ mb: 0.5 }}>
+                                  Dr. {appointment.doctor.firstName} {appointment.doctor.lastName}
+                                </Typography>
+                                <Typography variant="body2" color="primary" sx={{ fontWeight: 500 }}>
+                                  {appointment.doctor.specialization}
+                                </Typography>
+                              </Box>
+                            </Box>
+                            
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                               {appointment.doctor.qualification} • {appointment.doctor.department}
                             </Typography>
@@ -425,6 +508,11 @@ const Appointments: React.FC = () => {
                                   {appointmentService.formatAppointmentTime(appointment.appointmentDate)}
                                 </Typography>
                               </Box>
+                              <Chip 
+                                label={`${appointment.duration} min`} 
+                                size="small" 
+                                variant="outlined" 
+                              />
                             </Box>
                           </Grid>
 
@@ -445,6 +533,29 @@ const Appointments: React.FC = () => {
                               </Typography>
                             </Box>
 
+                            {appointment.symptoms && (
+                              <Box sx={{ mb: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
+                                  Symptoms:
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {appointment.symptoms}
+                                </Typography>
+                              </Box>
+                            )}
+                            
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 1 }}>
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                Type:
+                              </Typography>
+                              <Chip 
+                                label={appointment.type.charAt(0).toUpperCase() + appointment.type.slice(1).replace('_', ' ')} 
+                                size="small" 
+                                color="secondary" 
+                                variant="outlined" 
+                              />
+                            </Box>
+
                             {appointment.notes && (
                               <Box>
                                 <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5 }}>
@@ -455,30 +566,41 @@ const Appointments: React.FC = () => {
                                 </Typography>
                               </Box>
                             )}
+
+                            {appointment.diagnosis && (
+                              <Box sx={{ mt: 1 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, mb: 0.5, color: 'success.main' }}>
+                                  Diagnosis:
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                  {appointment.diagnosis}
+                                </Typography>
+                              </Box>
+                            )}
                           </Grid>
                         </Grid>
                       </Box>
 
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 120 }}>
+                      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 1, minWidth: { xs: '100%', sm: 'auto' } }}>
                         {appointmentService.canReschedule(appointment) && (
                           <Button
-                            variant="contained"
+                            variant="outlined"
                             size="small"
                             startIcon={<EditIcon />}
                             onClick={() => handleReschedule(appointment)}
-                            sx={{ textTransform: 'none' }}
+                            sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                           >
                             Reschedule
                           </Button>
                         )}
                         {appointmentService.canCancel(appointment) && (
                           <Button
-                            variant="contained"
+                            variant="outlined"
                             color="error"
                             size="small"
                             startIcon={<CancelIcon />}
                             onClick={() => handleCancelClick(appointment)}
-                            sx={{ textTransform: 'none' }}
+                            sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                           >
                             Cancel
                           </Button>
@@ -489,7 +611,7 @@ const Appointments: React.FC = () => {
                             color="success"
                             size="small"
                             startIcon={<VideoCallIcon />}
-                            sx={{ textTransform: 'none' }}
+                            sx={{ textTransform: 'none', whiteSpace: 'nowrap' }}
                           >
                             Join Call
                           </Button>

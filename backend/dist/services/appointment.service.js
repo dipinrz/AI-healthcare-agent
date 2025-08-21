@@ -5,6 +5,9 @@ const appointment_repository_1 = require("../repositories/appointment.repository
 const doctorAvailability_repository_1 = require("../repositories/doctorAvailability.repository");
 const patient_repository_1 = require("../repositories/patient.repository");
 const doctor_repository_1 = require("../repositories/doctor.repository");
+const notificationSetting_repository_1 = require("../repositories/notificationSetting.repository");
+const automaticReminderScheduler_service_1 = require("./automaticReminderScheduler.service");
+const NotificationLog_model_1 = require("../models/NotificationLog.model");
 const Appointment_model_1 = require("../models/Appointment.model");
 const logger_config_1 = require("../config/logger.config");
 const messages_1 = require("../constants/messages");
@@ -15,17 +18,23 @@ class AppointmentService {
         this.doctorAvailabilityRepository = new doctorAvailability_repository_1.DoctorAvailabilityRepository();
         this.patientRepository = new patient_repository_1.PatientRepository();
         this.doctorRepository = new doctor_repository_1.DoctorRepository();
+        this.notificationSettingRepository = new notificationSetting_repository_1.NotificationSettingRepository();
+        this.reminderScheduler = new automaticReminderScheduler_service_1.AutomaticReminderSchedulerService();
     }
-    async getAllAppointments(filters, page = 1, limit = 10, userRole, userId) {
+    async getAllAppointments(filters, page = 1, limit = 10, user) {
         try {
             logger_config_1.logger.info('Getting all appointments with filters:', filters);
             let appointments;
             // Apply role-based filtering
-            if (userRole === User_model_1.UserRole.PATIENT) {
-                appointments = await this.appointmentRepository.findByPatientId(userId, filters);
+            if (user.role === User_model_1.UserRole.PATIENT) {
+                const patientId = user.patientId || user.userId;
+                logger_config_1.logger.info(`Fetching appointments for patient ID: ${patientId} (user: ${user.userId})`);
+                appointments = await this.appointmentRepository.findByPatientId(patientId, filters);
+                logger_config_1.logger.info(`Found ${appointments.length} appointments for patient`);
             }
-            else if (userRole === User_model_1.UserRole.DOCTOR) {
-                appointments = await this.appointmentRepository.findByDoctorId(userId, filters);
+            else if (user.role === User_model_1.UserRole.DOCTOR) {
+                const doctorId = user.doctorId || user.userId;
+                appointments = await this.appointmentRepository.findByDoctorId(doctorId, filters);
             }
             else {
                 // Admin can see all appointments
@@ -35,10 +44,10 @@ class AppointmentService {
                 });
             }
             // Apply additional filters
-            if (filters.doctorId && userRole === User_model_1.UserRole.ADMIN) {
+            if (filters.doctorId && user.role === User_model_1.UserRole.ADMIN) {
                 appointments = appointments.filter(apt => apt.doctor.id === filters.doctorId);
             }
-            if (filters.patientId && userRole === User_model_1.UserRole.ADMIN) {
+            if (filters.patientId && user.role === User_model_1.UserRole.ADMIN) {
                 appointments = appointments.filter(apt => apt.patient.id === filters.patientId);
             }
             if (filters.status) {
@@ -62,7 +71,7 @@ class AppointmentService {
             throw error;
         }
     }
-    async getAppointmentById(id, userRole, userId) {
+    async getAppointmentById(id, user) {
         try {
             const appointment = await this.appointmentRepository.findById(id, {
                 relations: ['patient', 'doctor'],
@@ -71,10 +80,10 @@ class AppointmentService {
                 throw new Error(messages_1.MESSAGES.ERROR.APPOINTMENT_NOT_FOUND);
             }
             // Check permissions
-            if (userRole === User_model_1.UserRole.PATIENT && appointment.patient.id !== userId) {
+            if (user.role === User_model_1.UserRole.PATIENT && appointment.patient.id !== (user.patientId || user.userId)) {
                 throw new Error(messages_1.MESSAGES.ERROR.UNAUTHORIZED);
             }
-            if (userRole === User_model_1.UserRole.DOCTOR && appointment.doctor.id !== userId) {
+            if (user.role === User_model_1.UserRole.DOCTOR && appointment.doctor.id !== (user.doctorId || user.userId)) {
                 throw new Error(messages_1.MESSAGES.ERROR.UNAUTHORIZED);
             }
             return appointment;
@@ -86,7 +95,7 @@ class AppointmentService {
     }
     async createAppointment(appointmentData, user) {
         try {
-            const { doctorId, patientId, appointmentDate, reason, type, slotId } = appointmentData;
+            const { doctorId, patientId, appointmentDate, reason, type, duration = 30, slotId } = appointmentData;
             // Determine patient ID
             let finalPatientId = patientId;
             if (user.role === User_model_1.UserRole.PATIENT) {
@@ -129,6 +138,7 @@ class AppointmentService {
                 patient,
                 doctor,
                 appointmentDate,
+                duration,
                 reason,
                 type: type,
                 status: Appointment_model_1.AppointmentStatus.SCHEDULED,
@@ -136,6 +146,20 @@ class AppointmentService {
                 updatedAt: new Date(),
             });
             logger_config_1.logger.info('Appointment created successfully:', appointment.id);
+            // Schedule automatic reminders
+            try {
+                const appointmentWithRelations = await this.appointmentRepository.findById(appointment.id, {
+                    relations: ['patient', 'doctor']
+                });
+                if (appointmentWithRelations) {
+                    await this.reminderScheduler.scheduleRemindersForAppointment(appointmentWithRelations);
+                    logger_config_1.logger.info(`✅ Automatic reminders scheduled for appointment ${appointment.id}`);
+                }
+            }
+            catch (error) {
+                logger_config_1.logger.error('Failed to schedule automatic reminders:', error);
+                // Don't fail the appointment creation if reminder scheduling fails
+            }
             return appointment;
         }
         catch (error) {
@@ -143,9 +167,9 @@ class AppointmentService {
             throw error;
         }
     }
-    async updateAppointment(id, updateData, userRole, userId) {
+    async updateAppointment(id, updateData, user) {
         try {
-            const appointment = await this.getAppointmentById(id, userRole, userId);
+            const appointment = await this.getAppointmentById(id, user);
             // Only allow updates to scheduled appointments
             if (appointment.status !== 'scheduled') {
                 throw new Error('Only scheduled appointments can be updated');
@@ -165,9 +189,9 @@ class AppointmentService {
             throw error;
         }
     }
-    async cancelAppointment(id, reason, userRole, userId) {
+    async cancelAppointment(id, reason, user) {
         try {
-            const appointment = await this.getAppointmentById(id, userRole, userId);
+            const appointment = await this.getAppointmentById(id, user);
             if (appointment.status === 'cancelled') {
                 throw new Error(messages_1.MESSAGES.ERROR.APPOINTMENT_ALREADY_CANCELLED);
             }
@@ -192,6 +216,20 @@ class AppointmentService {
             if (!updatedAppointment) {
                 throw new Error(messages_1.MESSAGES.ERROR.APPOINTMENT_NOT_FOUND);
             }
+            // Cancel all pending reminders and send cancellation notification
+            try {
+                await this.reminderScheduler.cancelRemindersForAppointment(id);
+                const appointmentWithRelations = await this.appointmentRepository.findById(id, {
+                    relations: ['patient', 'doctor']
+                });
+                if (appointmentWithRelations) {
+                    await this.reminderScheduler.sendImmediateNotification(appointmentWithRelations, NotificationLog_model_1.NotificationReminderType.CANCELLED, 'Appointment Cancelled ❌', `Your appointment with Dr. ${appointmentWithRelations.doctor.firstName} ${appointmentWithRelations.doctor.lastName} on ${appointmentWithRelations.appointmentDate.toLocaleDateString()} at ${appointmentWithRelations.appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} has been cancelled`);
+                }
+                logger_config_1.logger.info(`📨 Cancellation notification sent and reminders cancelled for appointment ${id}`);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Failed to handle reminders for cancelled appointment:', error);
+            }
             logger_config_1.logger.info('Appointment cancelled successfully:', id);
             return updatedAppointment;
         }
@@ -200,12 +238,25 @@ class AppointmentService {
             throw error;
         }
     }
-    async rescheduleAppointment(id, newDate, newSlotId, userRole, userId) {
+    async rescheduleAppointment(id, newSlotId, user) {
         try {
-            const appointment = await this.getAppointmentById(id, userRole, userId);
+            logger_config_1.logger.info(`Reschedule appointment: ${id} to slot ${newSlotId}`);
+            const appointment = await this.getAppointmentById(id, user);
             if (appointment.status !== 'scheduled') {
                 throw new Error('Only scheduled appointments can be rescheduled');
             }
+            // Get the new slot details
+            const newSlot = await this.doctorAvailabilityRepository.findBySlotId(newSlotId);
+            if (!newSlot) {
+                throw new Error(messages_1.MESSAGES.ERROR.SLOT_NOT_AVAILABLE);
+            }
+            if (newSlot.isBooked) {
+                throw new Error(messages_1.MESSAGES.ERROR.SLOT_ALREADY_BOOKED);
+            }
+            if (newSlot.doctor.id !== appointment.doctor.id) {
+                throw new Error('Cannot reschedule to a different doctor');
+            }
+            const newDate = newSlot.startTime;
             if (newDate <= new Date()) {
                 throw new Error(messages_1.MESSAGES.ERROR.PAST_APPOINTMENT_TIME);
             }
@@ -218,20 +269,8 @@ class AppointmentService {
             if (oldMatchingSlot) {
                 await this.doctorAvailabilityRepository.releaseSlot(oldMatchingSlot.slotId);
             }
-            // Book new slot if provided
-            if (newSlotId) {
-                const newSlot = await this.doctorAvailabilityRepository.findBySlotId(newSlotId);
-                if (!newSlot) {
-                    throw new Error(messages_1.MESSAGES.ERROR.SLOT_NOT_AVAILABLE);
-                }
-                if (newSlot.isBooked) {
-                    throw new Error(messages_1.MESSAGES.ERROR.SLOT_ALREADY_BOOKED);
-                }
-                if (newSlot.doctor.id !== appointment.doctor.id) {
-                    throw new Error('Cannot reschedule to a different doctor');
-                }
-                await this.doctorAvailabilityRepository.bookSlot(newSlotId);
-            }
+            // Book new slot
+            await this.doctorAvailabilityRepository.bookSlot(newSlotId);
             const updatedAppointment = await this.appointmentRepository.update(id, {
                 appointmentDate: newDate,
                 updatedAt: new Date(),
@@ -239,20 +278,35 @@ class AppointmentService {
             if (!updatedAppointment) {
                 throw new Error(messages_1.MESSAGES.ERROR.APPOINTMENT_NOT_FOUND);
             }
-            logger_config_1.logger.info('Appointment rescheduled successfully:', id);
-            return updatedAppointment;
+            // Return appointment with relations
+            const finalAppointment = await this.appointmentRepository.findById(id, {
+                relations: ['patient', 'doctor']
+            });
+            // Cancel old reminders and schedule new ones
+            try {
+                await this.reminderScheduler.cancelRemindersForAppointment(id);
+                await this.reminderScheduler.scheduleRemindersForAppointment(finalAppointment);
+                // Send rescheduled notification
+                await this.reminderScheduler.sendImmediateNotification(finalAppointment, NotificationLog_model_1.NotificationReminderType.RESCHEDULED, 'Appointment Rescheduled 📅', `Your appointment with Dr. ${finalAppointment.doctor.firstName} ${finalAppointment.doctor.lastName} has been rescheduled to ${finalAppointment.appointmentDate.toLocaleDateString()} at ${finalAppointment.appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`);
+                logger_config_1.logger.info(`📨 Rescheduled notification sent and reminders updated for appointment ${id}`);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Failed to update reminders for rescheduled appointment:', error);
+            }
+            logger_config_1.logger.info(`Appointment rescheduled successfully: ${id} to slot ${newSlotId}`);
+            return finalAppointment || updatedAppointment;
         }
         catch (error) {
             logger_config_1.logger.error('Reschedule appointment error:', error);
             throw error;
         }
     }
-    async completeAppointment(id, completionData, userRole, userId) {
+    async completeAppointment(id, completionData, user) {
         try {
-            if (userRole !== User_model_1.UserRole.DOCTOR && userRole !== User_model_1.UserRole.ADMIN) {
+            if (user.role !== User_model_1.UserRole.DOCTOR && user.role !== User_model_1.UserRole.ADMIN) {
                 throw new Error(messages_1.MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
             }
-            const appointment = await this.getAppointmentById(id, userRole, userId);
+            const appointment = await this.getAppointmentById(id, user);
             if (appointment.status === 'completed') {
                 throw new Error(messages_1.MESSAGES.ERROR.APPOINTMENT_ALREADY_COMPLETED);
             }
@@ -276,36 +330,44 @@ class AppointmentService {
             throw error;
         }
     }
-    async getUpcomingAppointments(userRole, userId, limit = 10) {
+    async getUpcomingAppointments(user, limit = 10) {
         try {
-            return await this.appointmentRepository.findUpcoming(userId, userRole.toLowerCase(), limit);
+            const id = user.role === User_model_1.UserRole.PATIENT ? (user.patientId || user.userId) :
+                user.role === User_model_1.UserRole.DOCTOR ? (user.doctorId || user.userId) : user.userId;
+            return await this.appointmentRepository.findUpcoming(id, user.role.toLowerCase(), limit);
         }
         catch (error) {
             logger_config_1.logger.error('Get upcoming appointments error:', error);
             throw error;
         }
     }
-    async getPastAppointments(userRole, userId, limit = 10) {
+    async getPastAppointments(user, limit = 10) {
         try {
-            return await this.appointmentRepository.findPast(userId, userRole.toLowerCase(), limit);
+            const id = user.role === User_model_1.UserRole.PATIENT ? (user.patientId || user.userId) :
+                user.role === User_model_1.UserRole.DOCTOR ? (user.doctorId || user.userId) : user.userId;
+            return await this.appointmentRepository.findPast(id, user.role.toLowerCase(), limit);
         }
         catch (error) {
             logger_config_1.logger.error('Get past appointments error:', error);
             throw error;
         }
     }
-    async searchAppointments(searchTerm, userRole, userId) {
+    async searchAppointments(searchTerm, user) {
         try {
-            return await this.appointmentRepository.searchAppointments(searchTerm, userId, userRole.toLowerCase());
+            const id = user.role === User_model_1.UserRole.PATIENT ? (user.patientId || user.userId) :
+                user.role === User_model_1.UserRole.DOCTOR ? (user.doctorId || user.userId) : user.userId;
+            return await this.appointmentRepository.searchAppointments(searchTerm, id, user.role.toLowerCase());
         }
         catch (error) {
             logger_config_1.logger.error('Search appointments error:', error);
             throw error;
         }
     }
-    async getAppointmentStats(userRole, userId) {
+    async getAppointmentStats(user) {
         try {
-            return await this.appointmentRepository.getAppointmentStats(userId, userRole.toLowerCase());
+            const id = user.role === User_model_1.UserRole.PATIENT ? (user.patientId || user.userId) :
+                user.role === User_model_1.UserRole.DOCTOR ? (user.doctorId || user.userId) : user.userId;
+            return await this.appointmentRepository.getAppointmentStats(id, user.role.toLowerCase());
         }
         catch (error) {
             logger_config_1.logger.error('Get appointment stats error:', error);
@@ -352,8 +414,8 @@ class AppointmentService {
             }
             // Create the appointment
             const appointmentData = {
-                patientId,
-                doctorId: slot.doctor.id,
+                patient,
+                doctor: slot.doctor,
                 appointmentDate: slot.startTime,
                 duration: 30, // Default 30 minutes
                 status: Appointment_model_1.AppointmentStatus.SCHEDULED,
@@ -365,8 +427,28 @@ class AppointmentService {
             // Mark the slot as booked
             await this.doctorAvailabilityRepository.bookSlot(slotId);
             logger_config_1.logger.info(`Appointment booked successfully: ${appointment.id} for slot ${slotId}`);
-            // Return appointment with basic data
-            return await this.appointmentRepository.findById(appointment.id);
+            // Get appointment with relations for scheduling
+            const appointmentWithRelations = await this.appointmentRepository.findById(appointment.id, {
+                relations: ['patient', 'doctor']
+            });
+            // Schedule automatic reminders
+            try {
+                await this.reminderScheduler.scheduleRemindersForAppointment(appointmentWithRelations);
+                logger_config_1.logger.info(`✅ Automatic reminders scheduled for appointment ${appointment.id}`);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Failed to schedule automatic reminders:', error);
+                // Don't fail the appointment booking if reminder scheduling fails
+            }
+            // Send immediate confirmation notification
+            try {
+                await this.reminderScheduler.sendImmediateNotification(appointmentWithRelations, NotificationLog_model_1.NotificationReminderType.CONFIRMED, 'Appointment Confirmed ✅', `Your appointment with Dr. ${appointmentWithRelations.doctor.firstName} ${appointmentWithRelations.doctor.lastName} on ${appointmentWithRelations.appointmentDate.toLocaleDateString()} at ${appointmentWithRelations.appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} has been confirmed`);
+                logger_config_1.logger.info(`📨 Confirmation notification sent for appointment ${appointment.id}`);
+            }
+            catch (error) {
+                logger_config_1.logger.error('Failed to send confirmation notification:', error);
+            }
+            return appointmentWithRelations;
         }
         catch (error) {
             logger_config_1.logger.error('Book slot appointment error:', error);
@@ -405,6 +487,12 @@ class AppointmentService {
                 .filter(slot => !slot.isBooked)
                 .map(slot => ({
                 slotId: slot.slotId,
+                time: slot.startTime,
+                displayTime: slot.startTime.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true,
+                }),
                 startTime: slot.startTime,
                 endTime: slot.endTime,
                 is_booked: slot.isBooked,
@@ -422,6 +510,73 @@ class AppointmentService {
         catch (error) {
             logger_config_1.logger.error('Get available slots error:', error);
             throw error;
+        }
+    }
+    // Notification-related methods
+    async canSendNotificationToPatient(patientId, notificationType) {
+        try {
+            logger_config_1.logger.info(`Checking notification permission for patient ${patientId}, type: ${notificationType}`);
+            const settings = await this.notificationSettingRepository.getOrCreateSettings(patientId);
+            // First check if notifications are enabled globally
+            if (!settings.notificationsEnabled) {
+                logger_config_1.logger.info(`Notifications disabled for patient ${patientId}`);
+                return false;
+            }
+            // Check specific notification type
+            switch (notificationType) {
+                case '24h':
+                    return settings.reminder24h;
+                case '1h':
+                    return settings.reminder1h;
+                case 'confirmed':
+                    return settings.appointmentConfirmed;
+                case 'cancelled':
+                    return settings.appointmentCancelled;
+                case 'rescheduled':
+                    return settings.appointmentRescheduled;
+                default:
+                    return false;
+            }
+        }
+        catch (error) {
+            logger_config_1.logger.error('Error checking notification permission:', error);
+            return false; // Default to not sending if error occurs
+        }
+    }
+    async getAppointmentsEligibleForReminders(type) {
+        try {
+            const now = new Date();
+            let targetTime;
+            // Calculate target time based on reminder type
+            if (type === '24h') {
+                targetTime = new Date(now);
+                targetTime.setHours(targetTime.getHours() + 24);
+            }
+            else {
+                targetTime = new Date(now);
+                targetTime.setHours(targetTime.getHours() + 1);
+            }
+            // Get appointments around the target time (with 30-minute window)
+            const startWindow = new Date(targetTime);
+            startWindow.setMinutes(startWindow.getMinutes() - 15);
+            const endWindow = new Date(targetTime);
+            endWindow.setMinutes(endWindow.getMinutes() + 15);
+            // Get appointments in the time window that are scheduled or confirmed
+            const appointments = await this.appointmentRepository.findAppointmentsInTimeWindow(startWindow, endWindow, ['scheduled', 'confirmed']);
+            // Filter appointments based on patient notification preferences
+            const eligibleAppointments = [];
+            for (const appointment of appointments) {
+                const canSend = await this.canSendNotificationToPatient(appointment.patient.id, type);
+                if (canSend) {
+                    eligibleAppointments.push(appointment);
+                }
+            }
+            logger_config_1.logger.info(`Found ${eligibleAppointments.length} appointments eligible for ${type} reminders`);
+            return eligibleAppointments;
+        }
+        catch (error) {
+            logger_config_1.logger.error(`Error getting appointments eligible for ${type} reminders:`, error);
+            return [];
         }
     }
 }

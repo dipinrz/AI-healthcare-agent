@@ -1,6 +1,7 @@
 import app, { initializeApp } from './app';
 import { logger } from './config/logger.config';
 import { config } from './config';
+import { AutomaticReminderSchedulerService } from './services/automaticReminderScheduler.service';
 
 const PORT = config.PORT || 3001;
 
@@ -8,6 +9,10 @@ const startServer = async () => {
   try {
     // Initialize database and app
     await initializeApp();
+
+    // Initialize and start the automatic reminder scheduler
+    const reminderScheduler = new AutomaticReminderSchedulerService();
+    reminderScheduler.start();
 
     // Start server
     app.listen(PORT, () => {

@@ -68,8 +68,18 @@ export interface AppointmentResponse {
 }
 
 export interface AvailableSlot {
+  slotId: number;
   time: Date;
   displayTime: string;
+  startTime: Date;
+  endTime: Date;
+  is_booked: boolean;
+  doctor: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    specialization: string;
+  };
 }
 
 export interface AvailableSlotsResponse {
@@ -172,6 +182,41 @@ class AppointmentService {
     }
   }
 
+  async bookSlotAppointment(bookingData: {
+    patientId: string;
+    slotId: number;
+    reason: string;
+    symptoms?: string;
+    type?: string;
+  }): Promise<AppointmentResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/book-slot`, {
+        method: 'POST',
+        headers: this.getAuthHeaders(),
+        body: JSON.stringify(bookingData),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        result.data = {
+          ...result.data,
+          appointmentDate: new Date(result.data.appointmentDate),
+          createdAt: result.data.createdAt ? new Date(result.data.createdAt) : new Date(),
+          updatedAt: result.data.updatedAt ? new Date(result.data.updatedAt) : new Date(),
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Book slot appointment error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
   async updateAppointment(id: string, appointmentData: UpdateAppointmentData): Promise<AppointmentResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/appointments/${id}`, {
@@ -201,12 +246,12 @@ class AppointmentService {
     }
   }
 
-  async rescheduleAppointment(id: string, newDate: string | Date): Promise<AppointmentResponse> {
+  async rescheduleAppointment(id: string, newSlotId: number): Promise<AppointmentResponse> {
     try {
       const response = await fetch(`${API_BASE_URL}/appointments/${id}/reschedule`, {
         method: 'PUT',
         headers: this.getAuthHeaders(),
-        body: JSON.stringify({ appointmentDate: newDate }),
+        body: JSON.stringify({ slotId: newSlotId }),
       });
 
       const result = await response.json();
@@ -307,7 +352,9 @@ class AppointmentService {
       if (result.success && result.data) {
         result.data = result.data.map((slot: any) => ({
           ...slot,
-          time: new Date(slot.time),
+          time: new Date(slot.startTime),
+          startTime: new Date(slot.startTime),
+          endTime: new Date(slot.endTime),
         }));
       }
 
@@ -332,6 +379,108 @@ class AppointmentService {
       return result;
     } catch (error) {
       console.error('Get doctors error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async getAppointmentStats(): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/stats`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Get appointment stats error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async searchAppointments(searchTerm: string): Promise<AppointmentResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/search?q=${encodeURIComponent(searchTerm)}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        result.data = result.data.map((apt: any) => ({
+          ...apt,
+          appointmentDate: new Date(apt.appointmentDate),
+          createdAt: new Date(apt.createdAt),
+          updatedAt: new Date(apt.updatedAt),
+        }));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Search appointments error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async getUpcomingAppointments(limit: number = 10): Promise<AppointmentResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/upcoming?limit=${limit}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        result.data = result.data.map((apt: any) => ({
+          ...apt,
+          appointmentDate: new Date(apt.appointmentDate),
+          createdAt: new Date(apt.createdAt),
+          updatedAt: new Date(apt.updatedAt),
+        }));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Get upcoming appointments error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async getPastAppointments(limit: number = 10): Promise<AppointmentResponse> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/appointments/past?limit=${limit}`, {
+        method: 'GET',
+        headers: this.getAuthHeaders(),
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        result.data = result.data.map((apt: any) => ({
+          ...apt,
+          appointmentDate: new Date(apt.appointmentDate),
+          createdAt: new Date(apt.createdAt),
+          updatedAt: new Date(apt.updatedAt),
+        }));
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Get past appointments error:', error);
       return {
         success: false,
         message: 'Network error. Please try again.',

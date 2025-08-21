@@ -47,7 +47,7 @@ class AppointmentRepository extends base_repository_1.BaseRepository {
             .leftJoinAndSelect('appointment.patient', 'patient')
             .leftJoinAndSelect('appointment.doctor', 'doctor')
             .where('appointment.appointmentDate > :now', { now: new Date() })
-            .andWhere('appointment.status = :status', { status: 'scheduled' });
+            .andWhere('appointment.status IN (:...statuses)', { statuses: ['scheduled', 'confirmed'] });
         if (role === 'patient') {
             query.andWhere('patient.id = :userId', { userId });
         }
@@ -91,32 +91,46 @@ class AppointmentRepository extends base_repository_1.BaseRepository {
         return await query.orderBy('appointment.appointmentDate', 'DESC').getMany();
     }
     async getAppointmentStats(userId, role) {
-        const baseQuery = this.repository
-            .createQueryBuilder('appointment')
-            .leftJoinAndSelect('appointment.patient', 'patient')
-            .leftJoinAndSelect('appointment.doctor', 'doctor');
-        if (role === 'patient') {
-            baseQuery.where('patient.id = :userId', { userId });
-        }
-        else if (role === 'doctor') {
-            baseQuery.where('doctor.id = :userId', { userId });
-        }
-        const total = await baseQuery.getCount();
-        const scheduled = await baseQuery
-            .andWhere('appointment.status = :status', { status: 'scheduled' })
+        const createBaseQuery = () => {
+            const query = this.repository
+                .createQueryBuilder('appointment')
+                .leftJoinAndSelect('appointment.patient', 'patient')
+                .leftJoinAndSelect('appointment.doctor', 'doctor');
+            if (role === 'patient') {
+                query.where('patient.id = :userId', { userId });
+            }
+            else if (role === 'doctor') {
+                query.where('doctor.id = :userId', { userId });
+            }
+            return query;
+        };
+        const total = await createBaseQuery().getCount();
+        const upcoming = await createBaseQuery()
+            .andWhere('appointment.appointmentDate > :now', { now: new Date() })
+            .andWhere('appointment.status IN (:...statuses)', { statuses: ['scheduled', 'confirmed'] })
             .getCount();
-        const completed = await baseQuery
+        const completed = await createBaseQuery()
             .andWhere('appointment.status = :status', { status: 'completed' })
             .getCount();
-        const cancelled = await baseQuery
+        const cancelled = await createBaseQuery()
             .andWhere('appointment.status = :status', { status: 'cancelled' })
             .getCount();
         return {
             total,
-            scheduled,
+            upcoming,
             completed,
             cancelled,
         };
+    }
+    async findAppointmentsInTimeWindow(startWindow, endWindow, statuses = ['scheduled', 'confirmed']) {
+        return await this.repository
+            .createQueryBuilder('appointment')
+            .leftJoinAndSelect('appointment.patient', 'patient')
+            .leftJoinAndSelect('appointment.doctor', 'doctor')
+            .where('appointment.appointmentDate >= :startWindow', { startWindow })
+            .andWhere('appointment.appointmentDate <= :endWindow', { endWindow })
+            .andWhere('appointment.status IN (:...statuses)', { statuses })
+            .getMany();
     }
 }
 exports.AppointmentRepository = AppointmentRepository;

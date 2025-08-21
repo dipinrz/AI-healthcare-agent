@@ -10,7 +10,7 @@ const doctorAvailabilityController = new doctorAvailability_controller_1.DoctorA
 router.get('/available-doctors', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.getAvailableDoctors));
 router.get('/stats', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.getAvailabilityStats));
 // Doctor-specific routes
-router.get('/doctor/:doctorId/slots', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.getDoctorSlots));
+router.get('/doctor/:doctorId/slots', (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.getDoctorSlots));
 router.post('/doctor/:doctorId/generate-slots', auth_middleware_1.authenticateToken, auth_middleware_1.requireDoctorOrAdmin, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.generateSlotsForDoctor));
 // Slot management
 router.get('/slot/:slotId', auth_middleware_1.authenticateToken, (0, error_middleware_1.asyncHandler)(doctorAvailabilityController.getSlotById));

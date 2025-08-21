@@ -6,6 +6,8 @@ import appointmentRoutes from './appointment.routes';
 import medicationRoutes from './medication.routes';
 import prescriptionRoutes from './prescription.routes';
 import doctorAvailabilityRoutes from './doctorAvailability.routes';
+import notificationSettingRoutes from './notificationSetting.routes';
+import testNotificationRoutes from './testNotification.routes';
 import seedRoutes from './seed.routes';
 // import healthRecordRoutes from './healthRecord.routes';
 // import chatRoutes from './chat.routes';
@@ -21,6 +23,8 @@ router.use('/medications', medicationRoutes);
 router.use('/prescriptions', prescriptionRoutes);
 router.use('/doctor-availability', doctorAvailabilityRoutes);
 router.use('/availability', doctorAvailabilityRoutes);
+router.use('/notification-settings', notificationSettingRoutes);
+router.use('/test-notifications', testNotificationRoutes);
 router.use('/seed', seedRoutes);
 // router.use('/health-records', healthRecordRoutes);
 // router.use('/chat', chatRoutes);
@@ -40,6 +44,8 @@ router.get('/', (req, res) => {
       medications: '/api/medications',
       prescriptions: '/api/prescriptions',
       doctorAvailability: '/api/doctor-availability',
+      notificationSettings: '/api/notification-settings',
+      testNotifications: '/api/test-notifications',
       seed: '/api/seed',
       // healthRecords: '/api/health-records',
       // chat: '/api/chat',

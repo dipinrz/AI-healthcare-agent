@@ -61,8 +61,11 @@ interface Appointment {
 }
 
 interface AvailableSlot {
+  slotId: number;
   time: Date;
   displayTime: string;
+  startTime: Date;
+  endTime: Date;
 }
 
 interface RescheduleModalProps {
@@ -135,7 +138,7 @@ const RescheduleModal: React.FC<RescheduleModalProps> = ({
     try {
       const response = await appointmentService.rescheduleAppointment(
         appointment.id,
-        selectedSlot.time
+        selectedSlot.slotId
       );
       
       if (response.success) {

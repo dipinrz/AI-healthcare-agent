@@ -36,11 +36,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const app_1 = __importStar(require("./app"));
 const logger_config_1 = require("./config/logger.config");
 const config_1 = require("./config");
+const automaticReminderScheduler_service_1 = require("./services/automaticReminderScheduler.service");
 const PORT = config_1.config.PORT || 3001;
 const startServer = async () => {
     try {
         // Initialize database and app
         await (0, app_1.initializeApp)();
+        // Initialize and start the automatic reminder scheduler
+        const reminderScheduler = new automaticReminderScheduler_service_1.AutomaticReminderSchedulerService();
+        reminderScheduler.start();
         // Start server
         app_1.default.listen(PORT, () => {
             logger_config_1.logger.info(`🚀 Server running on port ${PORT}`);

@@ -11,6 +11,8 @@ import { VitalSigns } from '../models/VitalSigns.model';
 import { LabResult } from '../models/LabResult.model';
 import { MedicalDocument } from '../models/MedicalDocument.model';
 import { DoctorAvailability } from '../models/DoctorAvailability.model';
+import { NotificationSetting } from '../models/NotificationSetting.model';
+import { NotificationLog } from '../models/NotificationLog.model';
 
 // Database configuration based on environment
 const isProduction = config.NODE_ENV === 'production';
@@ -37,7 +39,9 @@ export const AppDataSource = new DataSource({
     VitalSigns,
     LabResult,
     MedicalDocument,
-    DoctorAvailability
+    DoctorAvailability,
+    NotificationSetting,
+    NotificationLog
   ],
   migrations: ['src/migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],
