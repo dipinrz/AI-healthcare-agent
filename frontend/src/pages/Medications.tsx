@@ -42,6 +42,7 @@ import {
   Close as CloseIcon,
   Medication as MedicationIcon
 } from '@mui/icons-material';
+import prescriptionsService from '../services/prescriptionsService';
 import medicationsService from '../services/medicationsService';
 import ModernPrescriptionManager from '../components/prescriptions/ModernPrescriptionManager';
 
@@ -67,19 +68,38 @@ interface DetailedMedication {
   manufacturer: string;
 }
 
-interface Prescription {
+interface PrescriptionItem {
   id: string;
   dosage: string;
   frequency: string;
   duration: string;
-  instructions: string;
+  instructions?: string;
   quantity: number;
   refills: number;
+  notes?: string;
+  medication: {
+    id: string;
+    name: string;
+    genericName: string;
+    brandName: string;
+    form: string;
+    strength: string;
+    category?: string;
+    description?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Prescription {
+  id: string;
+  prescriptionNotes?: string;
   status: 'active' | 'completed' | 'discontinued' | 'on_hold';
-  startDate: Date;
-  endDate?: Date;
-  notes: string;
-  createdAt: Date;
+  startDate: string;
+  endDate?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
   patient: {
     id: string;
     firstName: string;
@@ -92,14 +112,7 @@ interface Prescription {
     lastName: string;
     specialization: string;
   };
-  medication: {
-    id: string;
-    name: string;
-    genericName: string;
-    brandName: string;
-    form: string;
-    strength: string;
-  };
+  prescriptionItems: PrescriptionItem[];
 }
 
 const Medications: React.FC = () => {
@@ -142,9 +155,11 @@ const Medications: React.FC = () => {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(prescription => 
-        prescription.medication.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.medication.genericName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        prescription.medication.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        prescription.prescriptionItems.some(item =>
+          item.medication.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.medication.genericName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.medication.brandName.toLowerCase().includes(searchTerm.toLowerCase())
+        ) ||
         prescription.doctor.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         prescription.doctor.lastName.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -157,11 +172,11 @@ const Medications: React.FC = () => {
     setLoading(true);
     console.log('Loading prescriptions...');
     try {
-      const response = await medicationsService.getAllPrescriptions();
+      const response = await prescriptionsService.getAllPrescriptions();
       console.log('Prescriptions API response:', response);
       
-      if (response.success && response.data) {
-        const prescriptionsArray = Array.isArray(response.data) ? response.data : [response.data];
+      if ((response as any).success && (response as any).data) {
+        const prescriptionsArray = Array.isArray((response as any).data) ? (response as any).data : [(response as any).data];
         console.log('Loaded prescriptions:', prescriptionsArray);
         setPrescriptions(prescriptionsArray);
         setFilteredPrescriptions(prescriptionsArray);
@@ -170,8 +185,8 @@ const Medications: React.FC = () => {
           console.log('No prescriptions found for current user');
         }
       } else {
-        console.error('Failed to load prescriptions:', response.message);
-        showSnackbar(`Failed to load prescriptions: ${response.message || 'Please try again'}`, 'error');
+        console.error('Failed to load prescriptions:', (response as any).message);
+        showSnackbar(`Failed to load prescriptions: ${(response as any).message || 'Please try again'}`, 'error');
       }
     } catch (error) {
       console.error('Error loading prescriptions:', error);
@@ -410,7 +425,7 @@ const Medications: React.FC = () => {
         ) : (
           <Grid container spacing={3}>
             {filteredPrescriptions.map((prescription) => (
-              <Grid size={{xs: 12, md: 6, lg: 4}} key={prescription.id}>
+              <Grid size={{xs: 12, lg: 6}} key={prescription.id}>
                 <Card sx={{ 
                   height: '100%', 
                   transition: 'all 0.3s ease-in-out',
@@ -427,15 +442,10 @@ const Medications: React.FC = () => {
                       </Avatar>
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                          {prescription.medication.name}
+                          Multi-Medication Prescription
                         </Typography>
-                        {prescription.medication.brandName && prescription.medication.brandName !== prescription.medication.name && (
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                            Brand: {prescription.medication.brandName}
-                          </Typography>
-                        )}
                         <Typography variant="body2" color="text.secondary">
-                          {prescription.medication.form} • {prescription.medication.strength}
+                          {prescription.prescriptionItems.length} medications
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -455,44 +465,67 @@ const Medications: React.FC = () => {
 
                     <Divider sx={{ my: 2 }} />
 
-                    {/* Prescription Details */}
+                    {/* Medications List */}
+                    <Box sx={{ maxHeight: 300, overflowY: 'auto', mb: 2 }}>
+                      {prescription.prescriptionItems.map((item, index) => (
+                        <Box key={item.id} sx={{ mb: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle2" sx={{ fontWeight: 600, flex: 1 }}>
+                              {item.medication.name}
+                            </Typography>
+                            <Button
+                              size="small"
+                              variant="text"
+                              startIcon={<InfoIcon />}
+                              onClick={() => handleViewMedicationDetails(item.medication.id)}
+                              sx={{ minWidth: 'auto', p: 0.5 }}
+                            >
+                              Details
+                            </Button>
+                          </Box>
+                          
+                          {item.medication.brandName && item.medication.brandName !== item.medication.name && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5, fontSize: '0.75rem' }}>
+                              Brand: {item.medication.brandName}
+                            </Typography>
+                          )}
+                          
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontSize: '0.75rem' }}>
+                            {item.medication.form} • {item.medication.strength}
+                          </Typography>
+
+                          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                              <strong>Dosage:</strong> {item.dosage}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                              <strong>Frequency:</strong> {item.frequency}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                              <strong>Duration:</strong> {item.duration}
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
+                              <strong>Quantity:</strong> {item.quantity}
+                            </Typography>
+                          </Box>
+
+                          {item.instructions && (
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                              Instructions: {item.instructions}
+                            </Typography>
+                          )}
+
+                          {index < prescription.prescriptionItems.length - 1 && (
+                            <Divider sx={{ mt: 2 }} />
+                          )}
+                        </Box>
+                      ))}
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Prescription Info */}
                     <List dense sx={{ py: 0 }}>
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                          <PillIcon sx={{ fontSize: 18, color: 'primary.main' }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Dosage"
-                          secondary={prescription.dosage}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-                          secondaryTypographyProps={{ variant: 'body2' }}
-                        />
-                      </ListItem>
-
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                          <ClockIcon sx={{ fontSize: 18, color: 'secondary.main' }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Frequency"
-                          secondary={prescription.frequency}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-                          secondaryTypographyProps={{ variant: 'body2' }}
-                        />
-                      </ListItem>
-
-                      <ListItem sx={{ px: 0 }}>
-                        <ListItemIcon sx={{ minWidth: 32 }}>
-                          <CalendarIcon sx={{ fontSize: 18, color: 'info.main' }} />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary="Duration"
-                          secondary={prescription.duration}
-                          primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
-                          secondaryTypographyProps={{ variant: 'body2' }}
-                        />
-                      </ListItem>
-
                       <ListItem sx={{ px: 0 }}>
                         <ListItemIcon sx={{ minWidth: 32 }}>
                           <UserIcon sx={{ fontSize: 18, color: 'success.main' }} />
@@ -505,14 +538,14 @@ const Medications: React.FC = () => {
                         />
                       </ListItem>
 
-                      {prescription.instructions && (
+                      {prescription.prescriptionNotes && (
                         <ListItem sx={{ px: 0 }}>
                           <ListItemIcon sx={{ minWidth: 32 }}>
                             <InfoIcon sx={{ fontSize: 18, color: 'warning.main' }} />
                           </ListItemIcon>
                           <ListItemText
-                            primary="Instructions"
-                            secondary={prescription.instructions}
+                            primary="Prescription Notes"
+                            secondary={prescription.prescriptionNotes}
                             primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
                             secondaryTypographyProps={{ variant: 'body2' }}
                           />
@@ -521,27 +554,18 @@ const Medications: React.FC = () => {
                     </List>
 
                     {/* Action Buttons */}
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<InfoIcon />}
-                        onClick={() => handleViewMedicationDetails(prescription.medication.id)}
-                        sx={{ flex: 1 }}
-                      >
-                        Details
-                      </Button>
-                      {prescription.status === 'active' && (
+                    {prescription.status === 'active' && (
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                         <Button
                           size="small"
                           variant="contained"
                           startIcon={<CheckCircleIcon />}
                           sx={{ flex: 1 }}
                         >
-                          Mark Taken
+                          Mark All Taken
                         </Button>
-                      )}
-                    </Box>
+                      </Box>
+                    )}
 
                     {/* Additional Info */}
                     <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -551,11 +575,6 @@ const Medications: React.FC = () => {
                           <> • Ends: {new Date(prescription.endDate).toLocaleDateString()}</>
                         )}
                       </Typography>
-                      {prescription.quantity > 0 && (
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                          Quantity: {prescription.quantity} • Refills: {prescription.refills}
-                        </Typography>
-                      )}
                     </Box>
                   </CardContent>
                 </Card>

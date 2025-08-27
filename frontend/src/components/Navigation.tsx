@@ -30,7 +30,8 @@ import {
   Person as UserIcon,
   Favorite as HeartIcon,
   Menu as MenuIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  People as PatientsIcon
 } from '@mui/icons-material';
 
 interface NavigationProps {
@@ -51,6 +52,7 @@ const Navigation: React.FC<NavigationProps> = ({ user, onLogout }) => {
     if (userRole === 'doctor') {
       return [
         { path: '/', icon: Home, label: 'Dashboard' },
+        { path: '/doctor-dashboard', icon: PatientsIcon, label: 'Patient Management' },
         { path: '/doctor/appointments', icon: CalendarIcon, label: 'My Appointments' },
         { path: '/doctor/prescriptions', icon: PillIcon, label: 'Prescriptions' },
         { path: '/chat', icon: MessageIcon, label: 'AI Chat' },

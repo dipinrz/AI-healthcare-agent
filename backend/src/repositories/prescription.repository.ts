@@ -11,7 +11,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where('patient.id = :patientId', { patientId })
       .orderBy('prescription.createdAt', 'DESC')
       .getMany();
@@ -22,7 +23,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where('doctor.id = :doctorId', { doctorId })
       .orderBy('prescription.createdAt', 'DESC')
       .getMany();
@@ -33,7 +35,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where('medication.id = :medicationId', { medicationId })
       .orderBy('prescription.createdAt', 'DESC')
       .getMany();
@@ -44,7 +47,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where('patient.id = :patientId', { patientId })
       .andWhere('prescription.status = :status', { status: 'active' })
       .orderBy('prescription.createdAt', 'DESC')
@@ -56,7 +60,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where('prescription.status = :status', { status })
       .orderBy('prescription.createdAt', 'DESC')
       .getMany();
@@ -67,7 +72,8 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       .createQueryBuilder('prescription')
       .leftJoinAndSelect('prescription.patient', 'patient')
       .leftJoinAndSelect('prescription.doctor', 'doctor')
-      .leftJoinAndSelect('prescription.medication', 'medication')
+      .leftJoinAndSelect('prescription.prescriptionItems', 'prescriptionItems')
+      .leftJoinAndSelect('prescriptionItems.medication', 'medication')
       .where(
         '(patient.firstName ILIKE :searchTerm OR patient.lastName ILIKE :searchTerm OR doctor.firstName ILIKE :searchTerm OR doctor.lastName ILIKE :searchTerm OR medication.name ILIKE :searchTerm OR prescription.notes ILIKE :searchTerm)',
         { searchTerm: `%${searchTerm}%` }
@@ -87,15 +93,15 @@ export class PrescriptionRepository extends BaseRepository<Prescription> {
       where: { status: 'completed' as any } 
     });
     
-    const cancelled = await this.count({ 
-      where: { status: 'cancelled' as any } 
+    const discontinued = await this.count({ 
+      where: { status: 'discontinued' as any } 
     });
 
     return {
       total,
       active,
       completed,
-      cancelled,
+      discontinued,
     };
   }
 }

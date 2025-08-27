@@ -154,9 +154,7 @@ class MedicationsService {
       
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.getAuthHeaders(),
       });
 
       const result = await response.json();

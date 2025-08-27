@@ -1,8 +1,11 @@
 import { PrescriptionRepository } from '../repositories/prescription.repository';
+import { PrescriptionItemRepository } from '../repositories/prescriptionItem.repository';
 import { PatientRepository } from '../repositories/patient.repository';
 import { DoctorRepository } from '../repositories/doctor.repository';
 import { MedicationRepository } from '../repositories/medication.repository';
+import { UserRepository } from '../repositories/user.repository';
 import { Prescription, PrescriptionStatus } from '../models/Prescription.model';
+import { PrescriptionItem } from '../models/PrescriptionItem.model';
 import { logger } from '../config/logger.config';
 import { MESSAGES } from '../constants/messages';
 import { UserRole } from '../models/User.model';
@@ -16,9 +19,7 @@ export interface PrescriptionFilters {
   endDate?: Date;
 }
 
-export interface CreatePrescriptionData {
-  patientId: string;
-  doctorId: string;
+export interface CreatePrescriptionItemData {
   medicationId: string;
   dosage: string;
   frequency: string;
@@ -26,29 +27,33 @@ export interface CreatePrescriptionData {
   instructions?: string;
   quantity: number;
   refills: number;
-  startDate: Date;
-  endDate?: Date;
   notes?: string;
 }
 
+export interface CreatePrescriptionData {
+  patientId: string;
+  doctorId: string;
+  startDate: Date;
+  endDate?: Date;
+  prescriptionNotes?: string;
+  medications: CreatePrescriptionItemData[];
+}
+
 export interface UpdatePrescriptionData {
-  dosage?: string;
-  frequency?: string;
-  duration?: string;
-  instructions?: string;
-  quantity?: number;
-  refills?: number;
-  status?: PrescriptionStatus;
   startDate?: Date;
   endDate?: Date;
-  notes?: string;
+  prescriptionNotes?: string;
+  status?: PrescriptionStatus;
+  medications?: CreatePrescriptionItemData[];
 }
 
 export class PrescriptionService {
   private prescriptionRepository = new PrescriptionRepository();
+  private prescriptionItemRepository = new PrescriptionItemRepository();
   private patientRepository = new PatientRepository();
   private doctorRepository = new DoctorRepository();
   private medicationRepository = new MedicationRepository();
+  private userRepository = new UserRepository();
 
   async getAllPrescriptions(
     filters: PrescriptionFilters,
@@ -64,13 +69,31 @@ export class PrescriptionService {
 
       // Apply role-based filtering
       if (userRole === UserRole.PATIENT) {
-        prescriptions = await this.prescriptionRepository.findByPatientId(userId);
+        // Get the user's patient ID for filtering
+        const userWithPatient = await this.userRepository.findByIdWithRelations(userId);
+        logger.info('User with patient relation:', { userId, userWithPatient: userWithPatient ? { id: userWithPatient.id, email: userWithPatient.email, patient: userWithPatient.patient } : null });
+        const patientId = userWithPatient?.patient?.id;
+        logger.info('Patient ID for filtering:', { patientId });
+        if (patientId) {
+          prescriptions = await this.prescriptionRepository.findByPatientId(patientId);
+          logger.info('Found prescriptions for patient:', { patientId, count: prescriptions.length });
+        } else {
+          prescriptions = [];
+          logger.info('No patient ID found, returning empty array');
+        }
       } else if (userRole === UserRole.DOCTOR) {
-        prescriptions = await this.prescriptionRepository.findByDoctorId(userId);
+        // Get the user's doctor ID for filtering
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (doctorId) {
+          prescriptions = await this.prescriptionRepository.findByDoctorId(doctorId);
+        } else {
+          prescriptions = [];
+        }
       } else {
         // Admin can see all prescriptions
         prescriptions = await this.prescriptionRepository.findAll({
-          relations: ['patient', 'doctor', 'medication'],
+          relations: ['patient', 'doctor', 'prescriptionItems', 'prescriptionItems.medication'],
           order: { createdAt: 'DESC' },
         });
       }
@@ -81,7 +104,9 @@ export class PrescriptionService {
       }
 
       if (filters.medicationId && userRole === UserRole.ADMIN) {
-        prescriptions = prescriptions.filter(prescription => prescription.medication.id === filters.medicationId);
+        prescriptions = prescriptions.filter(prescription => 
+          prescription.prescriptionItems.some(item => item.medication.id === filters.medicationId)
+        );
       }
 
       const total = prescriptions.length;
@@ -107,7 +132,7 @@ export class PrescriptionService {
   ): Promise<Prescription> {
     try {
       const prescription = await this.prescriptionRepository.findById(id, {
-        relations: ['patient', 'doctor', 'medication'],
+        relations: ['patient', 'doctor', 'prescriptionItems', 'prescriptionItems.medication'],
       });
       
       if (!prescription) {
@@ -115,12 +140,22 @@ export class PrescriptionService {
       }
 
       // Check permissions
-      if (userRole === UserRole.PATIENT && prescription.patient.id !== userId) {
-        throw new Error(MESSAGES.ERROR.UNAUTHORIZED);
+      if (userRole === UserRole.PATIENT) {
+        // Get the user's patient ID for permission check
+        const userWithPatient = await this.userRepository.findByIdWithRelations(userId);
+        const patientId = userWithPatient?.patient?.id;
+        if (prescription.patient.id !== patientId) {
+          throw new Error(MESSAGES.ERROR.UNAUTHORIZED);
+        }
       }
 
-      if (userRole === UserRole.DOCTOR && prescription.doctor.id !== userId) {
-        throw new Error(MESSAGES.ERROR.UNAUTHORIZED);
+      if (userRole === UserRole.DOCTOR) {
+        // Get the user's doctor ID for permission check
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (prescription.doctor.id !== doctorId) {
+          throw new Error(MESSAGES.ERROR.UNAUTHORIZED);
+        }
       }
 
       return prescription;
@@ -136,7 +171,7 @@ export class PrescriptionService {
     userId: string
   ): Promise<Prescription> {
     try {
-      const { patientId, doctorId, medicationId, ...data } = prescriptionData;
+      const { patientId, doctorId, medications, ...data } = prescriptionData;
 
       // Only doctors and admins can create prescriptions
       if (userRole === UserRole.PATIENT) {
@@ -144,8 +179,18 @@ export class PrescriptionService {
       }
 
       // If user is a doctor, they can only create prescriptions for themselves
-      if (userRole === UserRole.DOCTOR && doctorId !== userId) {
-        throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+      // Get the user's doctor profile to check permissions
+      if (userRole === UserRole.DOCTOR) {
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const userDoctorId = userWithDoctor?.doctor?.id;
+        if (doctorId !== userDoctorId) {
+          throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+        }
+      }
+
+      // Validate at least one medication is provided
+      if (!medications || medications.length === 0) {
+        throw new Error('At least one medication is required for a prescription');
       }
 
       // Validate patient exists
@@ -160,10 +205,12 @@ export class PrescriptionService {
         throw new Error(MESSAGES.ERROR.DOCTOR_NOT_FOUND);
       }
 
-      // Validate medication exists
-      const medication = await this.medicationRepository.findById(medicationId);
-      if (!medication) {
-        throw new Error(MESSAGES.ERROR.MEDICATION_NOT_FOUND);
+      // Validate all medications exist
+      for (const medData of medications) {
+        const medication = await this.medicationRepository.findById(medData.medicationId);
+        if (!medication) {
+          throw new Error(`Medication with ID ${medData.medicationId} not found`);
+        }
       }
 
       // Check if prescription start date is not in the past
@@ -175,15 +222,36 @@ export class PrescriptionService {
       const prescription = await this.prescriptionRepository.create({
         patient,
         doctor,
-        medication,
         ...data,
         status: PrescriptionStatus.ACTIVE,
         createdAt: new Date(),
         updatedAt: new Date(),
       });
 
-      logger.info('Prescription created successfully:', prescription.id);
-      return prescription;
+      // Create prescription items for each medication
+      const prescriptionItems: Partial<PrescriptionItem>[] = medications.map(medData => ({
+        prescription,
+        medication: { id: medData.medicationId } as any,
+        dosage: medData.dosage,
+        frequency: medData.frequency,
+        duration: medData.duration,
+        instructions: medData.instructions,
+        quantity: medData.quantity,
+        refills: medData.refills,
+        notes: medData.notes,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      await this.prescriptionItemRepository.createBulkPrescriptionItems(prescriptionItems);
+
+      // Fetch complete prescription with items
+      const completePrescription = await this.prescriptionRepository.findById(prescription.id, {
+        relations: ['patient', 'doctor', 'prescriptionItems', 'prescriptionItems.medication'],
+      });
+
+      logger.info('Multi-medication prescription created successfully:', prescription.id);
+      return completePrescription!;
     } catch (error) {
       logger.error('Create prescription error:', error);
       throw error;
@@ -204,8 +272,13 @@ export class PrescriptionService {
         throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
       }
 
-      if (userRole === UserRole.DOCTOR && prescription.doctor.id !== userId) {
-        throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+      if (userRole === UserRole.DOCTOR) {
+        // Get the user's doctor ID for permission check
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (prescription.doctor.id !== doctorId) {
+          throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+        }
       }
 
       // Don't allow updating completed prescriptions
@@ -244,8 +317,13 @@ export class PrescriptionService {
         throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
       }
 
-      if (userRole === UserRole.DOCTOR && prescription.doctor.id !== userId) {
-        throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+      if (userRole === UserRole.DOCTOR) {
+        // Get the user's doctor ID for permission check
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (prescription.doctor.id !== doctorId) {
+          throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+        }
       }
 
       if (prescription.status === PrescriptionStatus.DISCONTINUED) {
@@ -284,8 +362,13 @@ export class PrescriptionService {
         throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
       }
 
-      if (userRole === UserRole.DOCTOR && prescription.doctor.id !== userId) {
-        throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+      if (userRole === UserRole.DOCTOR) {
+        // Get the user's doctor ID for permission check
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (prescription.doctor.id !== doctorId) {
+          throw new Error(MESSAGES.ERROR.INSUFFICIENT_PERMISSIONS);
+        }
       }
 
       if (prescription.status === PrescriptionStatus.COMPLETED) {
@@ -337,11 +420,24 @@ export class PrescriptionService {
       const filters = { status: PrescriptionStatus.ACTIVE };
       
       if (userRole === UserRole.PATIENT) {
-        return await this.prescriptionRepository.findActiveByPatientId(userId);
+        // Get the user's patient ID for filtering
+        const userWithPatient = await this.userRepository.findByIdWithRelations(userId);
+        const patientId = userWithPatient?.patient?.id;
+        if (patientId) {
+          return await this.prescriptionRepository.findActiveByPatientId(patientId);
+        } else {
+          return [];
+        }
       } else if (userRole === UserRole.DOCTOR) {
-        // For doctors, get all their prescriptions and filter active ones
-        const allPrescriptions = await this.prescriptionRepository.findByDoctorId(userId);
-        return allPrescriptions.filter(p => p.status === PrescriptionStatus.ACTIVE);
+        // Get the user's doctor ID for filtering
+        const userWithDoctor = await this.userRepository.findByIdWithRelations(userId);
+        const doctorId = userWithDoctor?.doctor?.id;
+        if (doctorId) {
+          const allPrescriptions = await this.prescriptionRepository.findByDoctorId(doctorId);
+          return allPrescriptions.filter(p => p.status === PrescriptionStatus.ACTIVE);
+        } else {
+          return [];
+        }
       } else {
         // Admin gets all active prescriptions
         const prescriptions = await this.prescriptionRepository.findAll({

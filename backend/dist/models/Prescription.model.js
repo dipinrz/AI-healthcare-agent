@@ -13,7 +13,7 @@ exports.Prescription = exports.PrescriptionStatus = void 0;
 const typeorm_1 = require("typeorm");
 const Patient_model_1 = require("./Patient.model");
 const Doctor_model_1 = require("./Doctor.model");
-const Medication_model_1 = require("./Medication.model");
+const PrescriptionItem_model_1 = require("./PrescriptionItem.model");
 var PrescriptionStatus;
 (function (PrescriptionStatus) {
     PrescriptionStatus["ACTIVE"] = "active";
@@ -29,29 +29,9 @@ __decorate([
     __metadata("design:type", String)
 ], Prescription.prototype, "id", void 0);
 __decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
-], Prescription.prototype, "dosage", void 0);
-__decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
-], Prescription.prototype, "frequency", void 0);
-__decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", String)
-], Prescription.prototype, "duration", void 0);
-__decorate([
     (0, typeorm_1.Column)('text', { nullable: true }),
     __metadata("design:type", String)
-], Prescription.prototype, "instructions", void 0);
-__decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", Number)
-], Prescription.prototype, "quantity", void 0);
-__decorate([
-    (0, typeorm_1.Column)(),
-    __metadata("design:type", Number)
-], Prescription.prototype, "refills", void 0);
+], Prescription.prototype, "prescriptionNotes", void 0);
 __decorate([
     (0, typeorm_1.Column)({
         type: 'enum',
@@ -89,9 +69,9 @@ __decorate([
     __metadata("design:type", Doctor_model_1.Doctor)
 ], Prescription.prototype, "doctor", void 0);
 __decorate([
-    (0, typeorm_1.ManyToOne)(() => Medication_model_1.Medication),
-    __metadata("design:type", Medication_model_1.Medication)
-], Prescription.prototype, "medication", void 0);
+    (0, typeorm_1.OneToMany)(() => PrescriptionItem_model_1.PrescriptionItem, prescriptionItem => prescriptionItem.prescription, { cascade: true }),
+    __metadata("design:type", Array)
+], Prescription.prototype, "prescriptionItems", void 0);
 exports.Prescription = Prescription = __decorate([
     (0, typeorm_1.Entity)()
 ], Prescription);

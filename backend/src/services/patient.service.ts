@@ -317,16 +317,19 @@ export class PatientService {
         },
         prescriptions: {
           total: prescriptions.length,
-          active: activePrescriptions.map(prescription => ({
-            id: prescription.id,
-            medicationName: prescription.medication?.name || 'Unknown',
-            dosage: prescription.dosage,
-            frequency: prescription.frequency,
-            startDate: prescription.startDate,
-            endDate: prescription.endDate,
-            instructions: prescription.instructions,
-            doctorName: `Dr. ${prescription.doctor?.firstName} ${prescription.doctor?.lastName}` || 'Unknown'
-          }))
+          active: activePrescriptions.flatMap(prescription => 
+            prescription.prescriptionItems?.map(item => ({
+              id: prescription.id,
+              prescriptionItemId: item.id,
+              medicationName: item.medication?.name || 'Unknown',
+              dosage: item.dosage,
+              frequency: item.frequency,
+              startDate: prescription.startDate,
+              endDate: prescription.endDate,
+              instructions: item.instructions,
+              doctorName: `Dr. ${prescription.doctor?.firstName} ${prescription.doctor?.lastName}` || 'Unknown'
+            })) || []
+          )
         },
         healthMetrics: {
           totalAppointments: appointments.length,

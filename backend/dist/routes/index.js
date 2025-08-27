@@ -14,7 +14,7 @@ const doctorAvailability_routes_1 = __importDefault(require("./doctorAvailabilit
 const notificationSetting_routes_1 = __importDefault(require("./notificationSetting.routes"));
 const testNotification_routes_1 = __importDefault(require("./testNotification.routes"));
 const seed_routes_1 = __importDefault(require("./seed.routes"));
-// import healthRecordRoutes from './healthRecord.routes';
+const healthRecords_routes_1 = __importDefault(require("./healthRecords.routes"));
 // import chatRoutes from './chat.routes';
 const router = (0, express_1.Router)();
 // Mount all routes
@@ -29,7 +29,7 @@ router.use('/availability', doctorAvailability_routes_1.default);
 router.use('/notification-settings', notificationSetting_routes_1.default);
 router.use('/test-notifications', testNotification_routes_1.default);
 router.use('/seed', seed_routes_1.default);
-// router.use('/health-records', healthRecordRoutes);
+router.use('/health-records', healthRecords_routes_1.default);
 // router.use('/chat', chatRoutes);
 // API documentation route
 router.get('/', (req, res) => {
@@ -49,7 +49,7 @@ router.get('/', (req, res) => {
             notificationSettings: '/api/notification-settings',
             testNotifications: '/api/test-notifications',
             seed: '/api/seed',
-            // healthRecords: '/api/health-records',
+            healthRecords: '/api/health-records',
             // chat: '/api/chat',
         },
     });

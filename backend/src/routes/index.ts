@@ -9,7 +9,7 @@ import doctorAvailabilityRoutes from './doctorAvailability.routes';
 import notificationSettingRoutes from './notificationSetting.routes';
 import testNotificationRoutes from './testNotification.routes';
 import seedRoutes from './seed.routes';
-// import healthRecordRoutes from './healthRecord.routes';
+import healthRecordRoutes from './healthRecords.routes';
 // import chatRoutes from './chat.routes';
 
 const router = Router();
@@ -26,7 +26,7 @@ router.use('/availability', doctorAvailabilityRoutes);
 router.use('/notification-settings', notificationSettingRoutes);
 router.use('/test-notifications', testNotificationRoutes);
 router.use('/seed', seedRoutes);
-// router.use('/health-records', healthRecordRoutes);
+router.use('/health-records', healthRecordRoutes);
 // router.use('/chat', chatRoutes);
 
 // API documentation route
@@ -47,7 +47,7 @@ router.get('/', (req, res) => {
       notificationSettings: '/api/notification-settings',
       testNotifications: '/api/test-notifications',
       seed: '/api/seed',
-      // healthRecords: '/api/health-records',
+      healthRecords: '/api/health-records',
       // chat: '/api/chat',
     },
   });

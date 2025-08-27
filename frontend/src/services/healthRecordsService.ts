@@ -151,10 +151,13 @@ class HealthRecordsService {
 
   async getHealthRecord(patientId: string): Promise<HealthRecordResponse> {
     try {
+      console.log('Making health records API call for patient:', patientId);
+      console.log('API URL:', `${API_BASE_URL}/health-records/${patientId}`);
       const response = await fetch(`${API_BASE_URL}/health-records/${patientId}`, {
         method: 'GET',
         headers: this.getAuthHeaders(),
       });
+      console.log('Health records API response status:', response.status);
 
       const result = await response.json();
       
@@ -270,6 +273,109 @@ class HealthRecordsService {
       return result;
     } catch (error) {
       console.error('Add medical document error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async uploadDocument(
+    patientId: string, 
+    file: File, 
+    documentData: Omit<CreateMedicalDocumentData, 'fileName' | 'fileType' | 'fileSize'>
+  ): Promise<MedicalDocumentResponse> {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', documentData.name || file.name);
+      formData.append('type', documentData.type || 'other');
+      
+      if (documentData.description) {
+        formData.append('description', documentData.description);
+      }
+      if (documentData.notes) {
+        formData.append('notes', documentData.notes);
+      }
+      if (documentData.documentDate) {
+        formData.append('documentDate', new Date(documentData.documentDate).toISOString());
+      }
+
+      const token = authService.getToken();
+      const response = await fetch(`${API_BASE_URL}/health-records/${patientId}/documents`, {
+        method: 'POST',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        result.data = {
+          ...result.data,
+          documentDate: new Date(result.data.documentDate),
+          createdAt: new Date(result.data.createdAt),
+        };
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Upload document error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async downloadDocument(patientId: string, documentId: string): Promise<{ success: boolean; blob?: Blob; filename?: string; message?: string }> {
+    try {
+      const token = authService.getToken();
+      const response = await fetch(`${API_BASE_URL}/health-records/${patientId}/documents/${documentId}/download`, {
+        method: 'GET',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      if (!response.ok) {
+        const errorResult = await response.json();
+        return {
+          success: false,
+          message: errorResult.message || 'Failed to download document',
+        };
+      }
+
+      const blob = await response.blob();
+      const filename = response.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'document';
+      
+      return {
+        success: true,
+        blob,
+        filename,
+      };
+    } catch (error) {
+      console.error('Download document error:', error);
+      return {
+        success: false,
+        message: 'Network error. Please try again.',
+      };
+    }
+  }
+
+  async deleteDocument(patientId: string, documentId: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/health-records/${patientId}/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Delete document error:', error);
       return {
         success: false,
         message: 'Network error. Please try again.',

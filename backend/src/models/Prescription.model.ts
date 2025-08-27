@@ -1,7 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany } from 'typeorm';
 import { Patient } from './Patient.model';
 import { Doctor } from './Doctor.model';
-import { Medication } from './Medication.model';
+import { PrescriptionItem } from './PrescriptionItem.model';
 
 export enum PrescriptionStatus {
   ACTIVE = 'active',
@@ -15,23 +15,8 @@ export class Prescription {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
-  dosage: string;
-
-  @Column()
-  frequency: string;
-
-  @Column()
-  duration: string;
-
   @Column('text', { nullable: true })
-  instructions: string;
-
-  @Column()
-  quantity: number;
-
-  @Column()
-  refills: number;
+  prescriptionNotes: string;
 
   @Column({
     type: 'enum',
@@ -61,6 +46,6 @@ export class Prescription {
   @ManyToOne(() => Doctor, doctor => doctor.prescriptions)
   doctor: Doctor;
 
-  @ManyToOne(() => Medication)
-  medication: Medication;
+  @OneToMany(() => PrescriptionItem, prescriptionItem => prescriptionItem.prescription, { cascade: true })
+  prescriptionItems: PrescriptionItem[];
 }

@@ -15,6 +15,8 @@ import ChatSessions from "./pages/ChatSessions";
 import HealthRecords from "./pages/HealthRecords";
 import DoctorAppointments from "./pages/doctor/DoctorAppointments";
 import DoctorPrescriptions from "./pages/doctor/DoctorPrescriptions";
+import DoctorDashboard from "./pages/DoctorDashboard";
+import PatientHealthRecords from "./pages/PatientHealthRecords";
 import ToastProvider from "./components/notifications/ToastProvider";
 import NewDashboard from "./pages/Dashboard";
 
@@ -139,6 +141,22 @@ function AppContent() {
                 element={
                   <ProtectedRoute requiredRole="doctor">
                     <DoctorPrescriptions />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/doctor-dashboard"
+                element={
+                  <ProtectedRoute requiredRole="doctor">
+                    <DoctorDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/health-records/:patientId"
+                element={
+                  <ProtectedRoute requiredRole="doctor">
+                    <PatientHealthRecords />
                   </ProtectedRoute>
                 }
               />

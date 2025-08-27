@@ -13,6 +13,7 @@ import { MedicalDocument } from '../models/MedicalDocument.model';
 import { DoctorAvailability } from '../models/DoctorAvailability.model';
 import { NotificationSetting } from '../models/NotificationSetting.model';
 import { NotificationLog } from '../models/NotificationLog.model';
+import { PrescriptionItem } from '../models/PrescriptionItem.model';
 
 // Database configuration based on environment
 const isProduction = config.NODE_ENV === 'production';
@@ -23,7 +24,8 @@ const databaseUrl = process.env.DATABASE_URL
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: databaseUrl,
-  synchronize: !isProduction, // Only use in development
+  synchronize: false, // Use migrations instead of auto-sync
+  migrationsRun: true, // Automatically run migrations on startup
   logging: config.NODE_ENV === 'development' && config.LOG_LEVEL === 'debug',
   ssl: databaseUrl.includes('neon.tech') || 
        databaseUrl.includes('amazonaws.com') || 
@@ -36,6 +38,7 @@ export const AppDataSource = new DataSource({
     Medication,
     ChatLog,
     Prescription,
+    PrescriptionItem,
     VitalSigns,
     LabResult,
     MedicalDocument,
@@ -43,7 +46,7 @@ export const AppDataSource = new DataSource({
     NotificationSetting,
     NotificationLog
   ],
-  migrations: ['src/migrations/*.ts'],
+  migrations: [__dirname + '/../migrations/*.ts'],
   subscribers: ['src/subscribers/*.ts'],
   // Connection pool settings
   extra: {

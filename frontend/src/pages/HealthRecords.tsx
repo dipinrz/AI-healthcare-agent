@@ -57,6 +57,7 @@ import { authService } from '../services/authService';
 import healthRecordsService from '../services/healthRecordsService';
 import PrescriptionManager from '../components/prescriptions/PrescriptionManager';
 import notificationService from '../services/notificationService';
+import DocumentUploadDialog from '../components/health-records/DocumentUploadDialog';
 
 interface VitalSigns {
   id: string;
@@ -92,6 +93,9 @@ interface Document {
   uploadDate: Date;
   size: string;
   url?: string;
+  doctor?: string;
+  fileName?: string;
+  fileType?: string;
 }
 
 interface Medication {
@@ -158,6 +162,8 @@ const HealthRecords: React.FC = () => {
   const [patientAppointments, setPatientAppointments] = useState<any[]>([]);
   const [patientPrescriptions, setPatientPrescriptions] = useState<any[]>([]);
   const [error, setError] = useState<string>('');
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [currentPatientId, setCurrentPatientId] = useState<string | null>(null);
 
   // Load patient data and related information
   useEffect(() => {
@@ -181,13 +187,20 @@ const HealthRecords: React.FC = () => {
             currentPatientId = patientsResponse.data[0].id;
           }
         }
+        
+        setCurrentPatientId(currentPatientId);
+        console.log('Current patient ID:', currentPatientId);
 
         // Load appointments, prescriptions, and health records if we have patient ID
         if (currentPatientId) {
+          console.log('About to load health records for patient:', currentPatientId);
           const [appointmentsResponse, prescriptionsResponse, healthRecordResponse] = await Promise.all([
             patientService.getPatientAppointments(currentPatientId),
             patientService.getPatientPrescriptions(currentPatientId),
-            healthRecordsService.getHealthRecord(currentPatientId)
+            healthRecordsService.getHealthRecord(currentPatientId).catch(error => {
+              console.error('Health record API error:', error);
+              return { success: false, error };
+            })
           ]);
 
           if (appointmentsResponse.success) {
@@ -199,11 +212,13 @@ const HealthRecords: React.FC = () => {
           }
 
           // If health records API returns data, use it instead of mock data
-          if (healthRecordResponse.success && healthRecordResponse.data) {
+          if (healthRecordResponse.success && 'data' in healthRecordResponse && healthRecordResponse.data) {
+            console.log('Health record response:', healthRecordResponse.data);
+            console.log('Documents found:', healthRecordResponse.data.documents);
             const realHealthRecord: HealthRecord = {
               id: '1',
               patientId: currentPatientId,
-              vitals: healthRecordResponse.data.vitalSigns.map(vs => ({
+              vitals: healthRecordResponse.data.vitalSigns.map((vs: any) => ({
                 id: vs.id,
                 date: vs.recordedDate,
                 bloodPressure: vs.systolicBP && vs.diastolicBP ? {
@@ -217,7 +232,7 @@ const HealthRecords: React.FC = () => {
                 oxygenSaturation: vs.oxygenSaturation,
                 notes: vs.notes
               })),
-              labResults: healthRecordResponse.data.labResults.map(lr => ({
+              labResults: healthRecordResponse.data.labResults.map((lr: any) => ({
                 id: lr.id,
                 testName: lr.testName,
                 value: lr.value,
@@ -228,15 +243,16 @@ const HealthRecords: React.FC = () => {
                 orderedBy: lr.orderedBy ? `${lr.orderedBy.firstName} ${lr.orderedBy.lastName}` : 'Unknown',
                 notes: lr.notes
               })),
-              documents: healthRecordResponse.data.documents.map(doc => ({
+              documents: healthRecordResponse.data.documents.map((doc: any) => ({
                 id: doc.id,
                 name: doc.name,
                 type: (doc.type as 'prescription' | 'lab_result' | 'imaging' | 'report' | 'other') || 'other',
-                date: doc.documentDate,
-                doctor: doc.createdBy ? `${doc.createdBy.firstName} ${doc.createdBy.lastName}` : 'Unknown',
-                url: `/api/documents/${doc.id}`,
-                uploadDate: doc.documentDate,
-                size: '0 KB'
+                uploadDate: new Date(doc.documentDate),
+                size: healthRecordsService.formatFileSize(doc.fileSize),
+                url: `/api/health-records/${currentPatientId}/documents/${doc.id}/download`,
+                doctor: doc.createdBy ? `${doc.createdBy.firstName} ${doc.createdBy.lastName}` : 'System',
+                fileName: doc.fileName,
+                fileType: doc.fileType
               })),
               prescriptions: patientPrescriptions.length > 0 ? patientPrescriptions.map(p => ({
                 id: p.id,
@@ -625,6 +641,145 @@ const HealthRecords: React.FC = () => {
     }
   };
 
+  const handleUploadClick = () => {
+    if (!currentPatientId) {
+      notificationService.showError('Patient ID not found. Please refresh the page.');
+      return;
+    }
+    setUploadDialogOpen(true);
+  };
+
+  const handleUploadSuccess = () => {
+    notificationService.showSuccess('Document uploaded successfully!');
+    // Reload health record data
+    const loadPatientData = async () => {
+      if (currentPatientId) {
+        try {
+          const healthRecordResponse = await healthRecordsService.getHealthRecord(currentPatientId);
+          if (healthRecordResponse.success && healthRecordResponse.data) {
+            const realHealthRecord: HealthRecord = {
+              id: '1',
+              patientId: currentPatientId,
+              vitals: healthRecordResponse.data.vitalSigns.map((vs: any) => ({
+                id: vs.id,
+                date: vs.recordedDate,
+                bloodPressure: vs.systolicBP && vs.diastolicBP ? {
+                  systolic: vs.systolicBP,
+                  diastolic: vs.diastolicBP
+                } : undefined,
+                heartRate: vs.heartRate,
+                temperature: vs.temperature,
+                weight: vs.weight,
+                height: vs.height,
+                oxygenSaturation: vs.oxygenSaturation,
+                notes: vs.notes
+              })),
+              labResults: healthRecordResponse.data.labResults.map((lr: any) => ({
+                id: lr.id,
+                testName: lr.testName,
+                value: lr.value,
+                unit: lr.unit,
+                referenceRange: lr.referenceRange || 'N/A',
+                status: lr.status === 'abnormal' || lr.status === 'pending' ? 'normal' : lr.status,
+                date: lr.testDate,
+                orderedBy: lr.orderedBy ? `${lr.orderedBy.firstName} ${lr.orderedBy.lastName}` : 'Unknown',
+                notes: lr.notes
+              })),
+              documents: healthRecordResponse.data.documents.map((doc: any) => ({
+                id: doc.id,
+                name: doc.name,
+                type: (doc.type as 'prescription' | 'lab_result' | 'imaging' | 'report' | 'other') || 'other',
+                uploadDate: new Date(doc.documentDate),
+                size: healthRecordsService.formatFileSize(doc.fileSize),
+                url: `/api/health-records/${currentPatientId}/documents/${doc.id}/download`,
+                doctor: doc.createdBy ? `${doc.createdBy.firstName} ${doc.createdBy.lastName}` : 'System',
+                fileName: doc.fileName,
+                fileType: doc.fileType
+              })),
+              prescriptions: patientPrescriptions.length > 0 ? patientPrescriptions.map(p => ({
+                id: p.id,
+                date: p.prescribedDate || new Date(),
+                doctorId: p.doctor?.id || 'unknown',
+                doctorName: p.doctor ? `${p.doctor.firstName} ${p.doctor.lastName}` : 'Unknown Doctor',
+                medications: [
+                  {
+                    id: p.medication?.id || p.id,
+                    name: p.medication?.name || 'Unknown Medication',
+                    dosage: p.dosage || 'As prescribed',
+                    frequency: p.frequency || 'As directed',
+                    instructions: p.instructions || 'Take as directed by physician',
+                    sideEffects: p.medication?.sideEffects || [],
+                    category: p.medication?.category || 'Medication',
+                    startDate: p.startDate || new Date(),
+                    prescribedBy: p.doctor ? `${p.doctor.firstName} ${p.doctor.lastName}` : 'Unknown Doctor'
+                  }
+                ],
+                diagnosis: p.diagnosis || 'Not specified',
+                notes: p.notes || '',
+                status: p.status || 'active'
+              })) : healthRecord?.prescriptions || [],
+              appointments: patientAppointments.length > 0 ? patientAppointments.map(a => ({
+                id: a.id,
+                date: a.appointmentDate,
+                time: new Date(a.appointmentDate).toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit', 
+                  hour12: true 
+                }),
+                doctorId: a.doctor?.id || 'unknown',
+                doctorName: a.doctor ? `${a.doctor.firstName} ${a.doctor.lastName}` : 'Unknown Doctor',
+                type: a.type?.replace('_', ' ') || 'Consultation',
+                status: a.status || 'scheduled',
+                reason: a.reason || 'Medical consultation',
+                specialty: a.doctor?.specialization || 'General Medicine',
+                location: a.location || 'Main Clinic'
+              })) : healthRecord?.appointments || [],
+              allergies: [],
+              chronicConditions: [],
+              emergencyContacts: []
+            };
+
+            setHealthRecord(realHealthRecord);
+          }
+        } catch (error) {
+          console.error('Failed to reload health record:', error);
+        }
+      }
+    };
+    
+    loadPatientData();
+  };
+
+  const handleDocumentDownload = async (documentId: string, documentName: string) => {
+    if (!currentPatientId) {
+      notificationService.showError('Patient ID not found.');
+      return;
+    }
+
+    try {
+      const result = await healthRecordsService.downloadDocument(currentPatientId, documentId);
+      
+      if (result.success && result.blob) {
+        // Create download link
+        const url = window.URL.createObjectURL(result.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = result.filename || documentName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        notificationService.showSuccess('Document downloaded successfully!');
+      } else {
+        notificationService.showError(result.message || 'Failed to download document');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      notificationService.showError('Failed to download document');
+    }
+  };
+
   if (loading || !healthRecord) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -664,6 +819,7 @@ const HealthRecords: React.FC = () => {
               <Button
                 variant="outlined"
                 startIcon={<UploadIcon />}
+                onClick={handleUploadClick}
                 sx={{ 
                   color: 'primary.contrastText', 
                   borderColor: 'primary.contrastText',
@@ -1374,13 +1530,22 @@ const HealthRecords: React.FC = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Medical Documents
                 </Typography>
-                <Button variant="contained" startIcon={<UploadIcon />}>
+                <Button 
+                  variant="contained" 
+                  startIcon={<UploadIcon />}
+                  onClick={handleUploadClick}
+                >
                   Upload Document
                 </Button>
+                <Typography variant="body2" sx={{ ml: 2 }}>
+                  {healthRecord.documents.length} documents found
+                </Typography>
               </Box>
               <Grid container spacing={3}>
-                {healthRecord.documents.map((document) => (
-                  <Grid size={{xs: 12, sm: 6, md: 4}} key={document.id}>
+                {(() => { 
+                  console.log('Rendering documents in UI:', healthRecord.documents);
+                  return healthRecord.documents.map((document) => (
+                    <Grid size={{xs: 12, sm: 6, md: 4}} key={document.id}>
                     <Card variant="outlined" sx={{ height: '100%', '&:hover': { boxShadow: 4 }, transition: 'box-shadow 0.3s' }}>
                       <CardContent sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 2 }}>
@@ -1411,17 +1576,23 @@ const HealthRecords: React.FC = () => {
                             size="small" 
                             sx={{ flex: 1 }}
                             startIcon={<EyeIcon />}
+                            onClick={() => handleDocumentDownload(document.id, document.name)}
                           >
                             View
                           </Button>
-                          <IconButton size="small" color="primary">
+                          <IconButton 
+                            size="small" 
+                            color="primary"
+                            onClick={() => handleDocumentDownload(document.id, document.name)}
+                          >
                             <DownloadIcon />
                           </IconButton>
                         </Box>
                       </CardContent>
                     </Card>
-                  </Grid>
-                ))}
+                    </Grid>
+                  ));
+                })()}
               </Grid>
             </CardContent>
           </Card>
@@ -1605,11 +1776,21 @@ const HealthRecords: React.FC = () => {
           )}
         </Dialog>
 
+        {/* Upload Dialog */}
+        {currentPatientId && (
+          <DocumentUploadDialog
+            open={uploadDialogOpen}
+            onClose={() => setUploadDialogOpen(false)}
+            patientId={currentPatientId}
+            onUploadSuccess={handleUploadSuccess}
+          />
+        )}
+
         {/* Floating Action Button */}
         <Fab 
           color="primary" 
           sx={{ position: 'fixed', bottom: 24, right: 24 }}
-          onClick={() => {}}
+          onClick={handleUploadClick}
         >
           <PlusIcon />
         </Fab>

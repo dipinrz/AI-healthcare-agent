@@ -277,16 +277,17 @@ class PatientService {
                 },
                 prescriptions: {
                     total: prescriptions.length,
-                    active: activePrescriptions.map(prescription => ({
+                    active: activePrescriptions.flatMap(prescription => prescription.prescriptionItems?.map(item => ({
                         id: prescription.id,
-                        medicationName: prescription.medication?.name || 'Unknown',
-                        dosage: prescription.dosage,
-                        frequency: prescription.frequency,
+                        prescriptionItemId: item.id,
+                        medicationName: item.medication?.name || 'Unknown',
+                        dosage: item.dosage,
+                        frequency: item.frequency,
                         startDate: prescription.startDate,
                         endDate: prescription.endDate,
-                        instructions: prescription.instructions,
+                        instructions: item.instructions,
                         doctorName: `Dr. ${prescription.doctor?.firstName} ${prescription.doctor?.lastName}` || 'Unknown'
-                    }))
+                    })) || [])
                 },
                 healthMetrics: {
                     totalAppointments: appointments.length,

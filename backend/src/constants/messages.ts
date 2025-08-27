@@ -57,6 +57,17 @@ export const MESSAGES = {
     PRESCRIPTION_DISCONTINUED: 'Prescription discontinued successfully',
     PRESCRIPTION_COMPLETED: 'Prescription completed successfully',
     ACTIVE_PRESCRIPTIONS_RETRIEVED: 'Active prescriptions retrieved successfully',
+    // Health Records Messages
+    HEALTH_RECORD_RETRIEVED: 'Health record retrieved successfully',
+    DOCUMENT_UPLOADED: 'Document uploaded successfully',
+    DOCUMENTS_RETRIEVED: 'Documents retrieved successfully',
+    DOCUMENT_DELETED: 'Document deleted successfully',
+    VITAL_SIGNS_ADDED: 'Vital signs added successfully',
+    VITAL_SIGNS_RETRIEVED: 'Vital signs retrieved successfully',
+    VITAL_SIGNS_UPDATED: 'Vital signs updated successfully',
+    VITAL_SIGNS_DELETED: 'Vital signs deleted successfully',
+    LAB_RESULT_ADDED: 'Lab result added successfully',
+    LAB_RESULTS_RETRIEVED: 'Lab results retrieved successfully',
   },
 
   ERROR: {

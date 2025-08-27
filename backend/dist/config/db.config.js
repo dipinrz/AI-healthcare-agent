@@ -16,6 +16,7 @@ const MedicalDocument_model_1 = require("../models/MedicalDocument.model");
 const DoctorAvailability_model_1 = require("../models/DoctorAvailability.model");
 const NotificationSetting_model_1 = require("../models/NotificationSetting.model");
 const NotificationLog_model_1 = require("../models/NotificationLog.model");
+const PrescriptionItem_model_1 = require("../models/PrescriptionItem.model");
 // Database configuration based on environment
 const isProduction = index_1.config.NODE_ENV === 'production';
 const databaseUrl = process.env.DATABASE_URL
@@ -24,7 +25,8 @@ const databaseUrl = process.env.DATABASE_URL
 exports.AppDataSource = new typeorm_1.DataSource({
     type: 'postgres',
     url: databaseUrl,
-    synchronize: !isProduction, // Only use in development
+    synchronize: false, // Use migrations instead of auto-sync
+    migrationsRun: true, // Automatically run migrations on startup
     logging: index_1.config.NODE_ENV === 'development' && index_1.config.LOG_LEVEL === 'debug',
     ssl: databaseUrl.includes('neon.tech') ||
         databaseUrl.includes('amazonaws.com') ||
@@ -37,6 +39,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
         Medication_model_1.Medication,
         ChatLog_model_1.ChatLog,
         Prescription_model_1.Prescription,
+        PrescriptionItem_model_1.PrescriptionItem,
         VitalSigns_model_1.VitalSigns,
         LabResult_model_1.LabResult,
         MedicalDocument_model_1.MedicalDocument,
@@ -44,7 +47,7 @@ exports.AppDataSource = new typeorm_1.DataSource({
         NotificationSetting_model_1.NotificationSetting,
         NotificationLog_model_1.NotificationLog
     ],
-    migrations: ['src/migrations/*.ts'],
+    migrations: [__dirname + '/../migrations/*.ts'],
     subscribers: ['src/subscribers/*.ts'],
     // Connection pool settings
     extra: {
